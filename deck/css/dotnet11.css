@@ -1,0 +1,47 @@
+/* Deck-specific additions for "What's new in .NET 11". */
+
+/* status badges: what is stable at GA vs still preview / experimental */
+.reveal .badge {
+  display: inline-block;
+  font-family: var(--font-mono);
+  font-size: .42em;
+  font-weight: 700;
+  letter-spacing: .06em;
+  text-transform: uppercase;
+  vertical-align: middle;
+  padding: .28em .7em;
+  border-radius: 999px;
+  border: 1px solid currentColor;
+  margin-left: .5em;
+}
+.reveal .badge.stable  { color: var(--ok); }
+.reveal .badge.preview { color: var(--warn); }
+.reveal .badge.exp     { color: var(--bad); }
+.reveal h2 .badge { font-size: .3em; transform: translateY(-.25em); }
+
+/* a warning squiggle, as opposed to the template's error one */
+.squig.warn {
+  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='8' height='5'><path d='M0 4 L2 1 L4 4 L6 1 L8 4' stroke='%23fbbf24' fill='none' stroke-width='1.4' stroke-linecap='round'/></svg>");
+}
+.errorlist .sev.warn { color: var(--warn); }
+.ide .tabs .build.amber { color: var(--warn); }
+
+/* the release timeline on the status slide */
+.timeline {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 18px;
+  margin-top: 10px;
+}
+.timeline .step {
+  border-top: 3px solid var(--line);
+  padding-top: 14px;
+}
+.timeline .step.done { border-color: var(--ok); }
+.timeline .step.now  { border-color: var(--accent); }
+.timeline .step .when { font-family: var(--font-mono); font-size: .55em; color: var(--fg-dim); }
+.timeline .step .what { font-size: .8em; font-weight: 700; color: #fff; margin-top: 4px; }
+.timeline .step .why  { font-size: .55em; color: var(--fg-dim); margin-top: 6px; line-height: 1.4; }
+
+/* small code windows side by side */
+.reveal .grid-2 .code-window .codelines { font-size: .32em; }

@@ -1,0 +1,4 @@
+<Solution>
+  <Project Path="Dotnet11Demo/Dotnet11Demo.csproj" />
+  <Project Path="RuntimeAsyncDemo/RuntimeAsyncDemo.csproj" />
+</Solution>
