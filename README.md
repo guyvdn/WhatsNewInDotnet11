@@ -42,7 +42,7 @@ cd examples
 dotnet run --project Dotnet11Demo
 
 # Runtime Async: compare the two stack traces
-dotnet build RuntimeAsyncDemo --no-incremental -p:UseRuntimeAsync=false; dotnet RuntimeAsyncDemo/bin/Debug/net11.0/RuntimeAsyncDemo.dll
+dotnet build RuntimeAsyncDemo --no-incremental; dotnet RuntimeAsyncDemo/bin/Debug/net11.0/RuntimeAsyncDemo.dll
 dotnet build RuntimeAsyncDemo --no-incremental -p:Features=runtime-async=on; dotnet RuntimeAsyncDemo/bin/Debug/net11.0/RuntimeAsyncDemo.dll
 
 cd FileBasedApp

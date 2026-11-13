@@ -305,8 +305,8 @@ int third = Enumerable.Range(1, 10)[2];
         <h2>Memory safety <span class="badge preview">preview</span></h2>
         <ul class="rows">
           <li>Pointer <em>types</em>, <code>&amp;</code>, <code>fixed</code> and <code>sizeof</code> no longer need <code>unsafe</code></li>
-          <li>Only <strong>dereferencing</strong> does &mdash; <code>unsafe(expr)</code> scopes it to one expression</li>
-          <li>Needs <code>LangVersion preview</code>; Roslyn already calls it <strong>C# 16</strong></li>
+          <li>Only operations that touch the memory do (<code>*p</code>, <code>-&gt;</code>, <code>p[i]</code>, calling a function pointer) &mdash; <code>unsafe(expr)</code> scopes it to one expression</li>
+          <li>Needs <code>LangVersion preview</code>; slated for a later C# version</li>
         </ul>
         <aside class="notes">Mention only. Don't put this in client code.</aside>
       </section>
@@ -330,7 +330,7 @@ int third = Enumerable.Range(1, 10)[2];
       <div class="toolbar" data-widget="pipeline-toolbar">
         <span class="label">runtime-async</span>
         <div class="seg" data-role="kind">
-          <button data-kind="Off" aria-selected="true">off (today)</button>
+          <button data-kind="Off" aria-selected="true">off (default)</button>
           <button data-kind="On">on</button>
         </div>
         <button class="btn primary" data-role="build">&#9654; Run <span class="kbd">B</span></button>
@@ -377,7 +377,7 @@ async Task MiddleAsync() => await InnerAsync();
 async Task InnerAsync()
 {
     await Task.CompletedTask;
-    Console.WriteLine(new StackTrace());
+    Console.WriteLine(new StackTrace(true));
 }
         </script>
         <script type="text/template" data-variant="Off" data-side="out">
@@ -405,7 +405,7 @@ async Task MiddleAsync() => await InnerAsync();
 async Task InnerAsync()
 {
     await Task.CompletedTask;
-    Console.WriteLine(new StackTrace());
+    Console.WriteLine(new StackTrace(true));
 }
         </script>
         <script type="text/template" data-variant="On" data-side="out">
@@ -428,8 +428,8 @@ at <Main>(String[] args)
         looked like this; the win is in live stacks &mdash; profilers, the debugger's
         call-stack window &mdash; plus fewer allocations. No longer preview at GA: no
         EnablePreviewFeatures needed, but still opt-in for your own code. The framework
-        libraries already use it (opt out with UseRuntimeAsync=false), so test AsyncLocal
-        and ExecutionContext-heavy code on upgrade.
+        libraries already use it, so test AsyncLocal and ExecutionContext-heavy code on
+        upgrade.
       </aside>
     </section>
 
@@ -451,7 +451,7 @@ at <Main>(String[] args)
         </div>
         <div class="card fragment fade-up">
           <h4>Hardware</h4>
-          <p><code>Half</code> uses FP16 instructions, <code>Math.BigMul</code> is one <code>MUL</code>, AVX-VNNI-512</p>
+          <p><code>Half</code> uses hardware FP16 where available, <code>Math.BigMul</code> is one <code>MUL</code>, AVX-VNNI-512</p>
         </div>
         <div class="card fragment fade-up">
           <h4>Diagnostics</h4>
@@ -505,14 +505,14 @@ Hello, Ada!
         </div>
       </div>
       <ul class="rows" style="margin-top:28px">
-        <li class="fragment fade-in-then-semi-out">Split across files, reference DLLs, reuse NativeAOT output between runs</li>
+        <li class="fragment fade-in-then-semi-out">Split across files, reference DLLs; an unchanged app relaunches without a rebuild</li>
         <li class="fragment fade-in-then-semi-out">New analyzer <code>CA2266</code> wants the <code>#!</code> line on the entry file</li>
       </ul>
       <aside class="notes">
         Checked on GA: CA2266 fires on a multi-file app without the shebang, hence line 1.
-        Including .cs files also landed in SDK 10.0.300; DLL includes are 11 only.
-        dotnet run -e is new in general, not only for file-based apps. RC2 adds quoted
-        #:property values and Name=Value metadata on #:package.
+        Including .cs files also works on recent .NET 10 SDKs; DLL includes are 11 only.
+        dotnet run -e is new in general, not only for file-based apps. 11 also adds quoted
+        #:property values and Name=Value metadata on #:package, #:project and #:ref.
       </aside>
     </section>
 
@@ -587,8 +587,9 @@ Console.WriteLine(result.ExitStatus.ExitCode);
       </div>
       <p class="lead small fragment fade-up">Also: <code>StartAndForget</code>, <code>KillOnParentExit</code>, <code>StartSuspended</code>, <code>TryGetProcessById</code>, <code>Signal(PosixSignal)</code></p>
       <aside class="notes">
-        Both versions compile and run in examples/Dotnet11Demo. Reading stdout and stderr
-        concurrently is the deadlock trap in the old version; the new API handles it.
+        Both versions compile and run in examples/Dotnet11Demo. The old code must read stdout and
+        stderr concurrently to avoid the classic deadlock; the new API does that for you.
+        KillOnParentExit is Windows only, StartSuspended Windows and macOS.
       </aside>
     </section>
 
@@ -657,7 +658,7 @@ app.MapGet("/health", [ShortCircuit] () => "Healthy");
         </script>
       </figure>
       <ul class="rows" style="margin-top:20px">
-        <li class="fragment fade-in-then-semi-out"><strong>Zstandard</strong> response compression and request decompression, on by default</li>
+        <li class="fragment fade-in-then-semi-out"><strong>Zstandard</strong> in the response-compression and request-decompression middleware, enabled by default there</li>
         <li class="fragment fade-in-then-semi-out"><strong>OpenAPI 3.2</strong> is the default document version</li>
         <li class="fragment fade-in-then-semi-out"><code>dotnet new mcpserver</code> ships in the SDK</li>
       </ul>
@@ -666,7 +667,7 @@ app.MapGet("/health", [ShortCircuit] () => "Healthy");
         span. Opt out with the AppContext switch
         Microsoft.AspNetCore.Hosting.SuppressActivityOpenTelemetryData. OpenAPI 3.2 is a
         breaking change if your client generator lags: set OpenApiVersion = OpenApi3_1.
-        Kestrel's non-throwing HTTP/1.1 parser: 20-40% more throughput under malformed traffic.
+        Kestrel's non-throwing HTTP/1.1 parser: up to 20-40% more throughput under malformed traffic.
       </aside>
     </section>
 
@@ -690,8 +691,8 @@ app.MapGet("/health", [ShortCircuit] () => "Healthy");
       <div class="grid-2">
         <div class="card fragment fade-up">
           <h4>Faster includes</h4>
-          <p class="big">22&ndash;29%</p>
-          <p>pruned joins and <code>ORDER BY</code> keys for to-one includes. No code change.</p>
+          <p class="big">up to 29%</p>
+          <p>in EF's own benchmark: pruned joins and <code>ORDER BY</code> keys for to-one includes. No code change.</p>
         </div>
         <div class="card fragment fade-up">
           <h4>LINQ to SQL</h4>
@@ -707,7 +708,7 @@ app.MapGet("/health", [ShortCircuit] () => "Healthy");
         </div>
       </div>
       <aside class="notes">
-        The 22-29% is from the EF Core docs' own benchmark (single vs split query).
+        The docs' benchmark: one scenario 22% faster with a single query, 29% with a split query; your mileage will vary.
         Requires the .NET 11 runtime: EF Core 11 does not run on .NET 10. The latest
         migration ID is now in the snapshot, so diverging branches give a merge conflict
         instead of a silent mess. SQL Server: vector properties no longer loaded by default.
@@ -723,7 +724,7 @@ app.MapGet("/health", [ShortCircuit] () => "Healthy");
       <h2>Before you upgrade</h2>
       <table class="matrix">
         <tbody>
-          <tr class="fragment fade-in"><th style="width:28%">CPU baseline</th><td>x86-64-v2 / Arm64 LSE &mdash; old machines fail at startup</td></tr>
+          <tr class="fragment fade-in"><th style="width:28%">CPU baseline</th><td>x86-64-v2 everywhere, LSE on Windows Arm64 &mdash; old machines fail at startup</td></tr>
           <tr class="fragment fade-in"><th>Numerics</th><td><code>decimal</code> &harr; <code>double</code> now correctly rounded, <strong>no compat switch</strong></td></tr>
           <tr class="fragment fade-in"><th>Hosting</th><td><code>IHost.RunAsync</code> throws when a <code>BackgroundService</code> fails</td></tr>
           <tr class="fragment fade-in"><th>ASP.NET Core</th><td>OpenAPI 3.2 default, OTel tags on by default</td></tr>
@@ -750,9 +751,9 @@ app.MapGet("/health", [ShortCircuit] () => "Healthy");
 <span class="dim">PS</span> <span class="p">net11&gt;</span> dotnet run dec.cs
   1.2299999999999999822364316060 <span class="er">False</span>
       </div>
-      <p class="lead small" style="margin-top:24px">Correctly rounded now: the exact value of the <code>double</code>. Before, it was rounded to 15 significant digits.</p>
+      <p class="lead small" style="margin-top:24px">Correctly rounded now: the <code>double</code>'s exact value, rounded once. Before, it was rounded to 15 significant digits.</p>
       <aside class="notes">
-        Real output, .NET 10.0.401 vs 11.0.100-rc.1. Mathematically the new result is the
+        Real output, .NET 10.0.401 vs 11.0.100 GA. Mathematically the new result is the
         right one, and there is no compat switch. Anything that goes double to decimal and
         then compares, rounds to cents or hashes: test it.
       </aside>
@@ -768,7 +769,7 @@ app.MapGet("/health", [ShortCircuit] () => "Healthy");
       </ul>
       <aside class="notes">
         Try them on a branch, not in a client's main line. Everything else in the deck is
-        stable and supported at GA. Runtime Async came off preview at GA: it's opt-in, not experimental.
+        stable at GA. Runtime Async came off preview at GA: it's opt-in, not experimental.
       </aside>
     </section>
 
@@ -778,7 +779,7 @@ app.MapGet("/health", [ShortCircuit] () => "Healthy");
         <div class="card fragment fade-up"><h4>C# 15</h4><p>The <code>_ =&gt;</code> arm: <code>union</code> and <code>closed</code> make the compiler check every case</p></div>
         <div class="card fragment fade-up"><h4>Runtime</h4><p>Reading past state machines: opt-in Runtime Async shows only your own frames</p></div>
         <div class="card fragment fade-up"><h4>Tooling</h4><p>The <code>.csproj</code> for a tool: <code>dotnet app.cs</code> with <code>#:include</code></p></div>
-        <div class="card fragment fade-up"><h4>Libraries &amp; web</h4><p>Process plumbing, hand-rolled joins, the OTel package</p></div>
+        <div class="card fragment fade-up"><h4>Libraries &amp; web</h4><p>Process plumbing, hand-rolled joins, the OTel instrumentation package</p></div>
       </div>
       <blockquote class="pull hero fragment fade-up">
         <p>Start with unions. They change how you model a domain.</p>
