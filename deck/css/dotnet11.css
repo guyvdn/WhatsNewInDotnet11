@@ -45,3 +45,6 @@
 
 /* small code windows side by side */
 .reveal .grid-2 .code-window .codelines { font-size: .32em; }
+
+/* plain-words gloss under a card title: "NativeAOT (compiled ahead of time)" */
+.reveal .card h4 small { display: block; margin-top: 2px; font-size: .72em; font-weight: 400; letter-spacing: 0; text-transform: none; opacity: .7; }

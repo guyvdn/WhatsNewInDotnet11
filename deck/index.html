@@ -41,8 +41,8 @@
       <h2>Less code to write, less code to trust</h2>
       <p class="tagline">Guy Van den Nieuwenhof</p>
       <div class="meta">
-        <span class="chip">GA <b>10 Nov 2026</b></span>
-        <span class="chip"><b>STS</b> &middot; until 14 Nov 2028</span>
+        <span class="chip">released <b>10 Nov 2026</b></span>
+        <span class="chip">short-term support (<b>STS</b>) &middot; until 14 Nov 2028</span>
         <span class="chip">press <b>?</b> for keys</span>
       </div>
       <aside class="notes">
@@ -95,6 +95,42 @@ string name = pet switch
         Step 2: assignment converts implicitly. Step 3: the switch is exhaustive, so no
         default arm. Under the hood it lowers to a struct with an object? Value
         property, so value-type cases are boxed &mdash; worth knowing for hot paths.
+      </aside>
+    </section>
+
+    <section data-part="csharp" data-title="Unions as results">
+      <h2>Unions as results</h2>
+      <figure class="code-window" data-code data-lang="csharp"
+              data-file="CreateOrder.cs" data-tag="mediator handler" data-steps="1|3-9|11-17">
+        <script type="text/template">
+public union CreateOrderResult(OrderCreated, ValidationFailed, ProductNotFound);
+
+public async Task<CreateOrderResult> Handle(CreateOrder command)
+{
+    if (command.Quantity <= 0)
+        return new ValidationFailed("Quantity", "Must be positive");
+    if (!await products.ExistsAsync(command.ProductId))
+        return new ProductNotFound(command.ProductId);
+    return new OrderCreated(await orders.AddAsync(command));
+}
+
+app.MapPost("/orders", async (CreateOrder command, CreateOrderHandler handler) =>
+    await handler.Handle(command) switch
+    {
+        OrderCreated created    => Results.Created($"/orders/{created.Id}", created),
+        ValidationFailed failed => Results.BadRequest(failed),
+        ProductNotFound missing => Results.NotFound(missing),
+    });
+        </script>
+      </figure>
+      <aside class="notes">
+        This is where unions will show up most: the response type of a mediator or CQRS
+        handler. Step 1: the result type lists every outcome. Step 2: the handler returns
+        plain records, no exceptions for control flow and no OneOf or FluentResults
+        package. Step 3: the endpoint has to map every outcome to HTTP; add a fourth case
+        later and this switch warns until you handle it. With MediatR it's the same:
+        IRequest&lt;CreateOrderResult&gt;. Runnable version in examples/ResultUnion
+        (201, 400 and 404, checked on the released SDK).
       </aside>
     </section>
 
@@ -162,7 +198,7 @@ string name = pet switch
           <div class="chrome">
             <span class="dots"><i></i><i></i><i></i></span>
             <span class="name">output.json</span>
-            <span class="tag gen" style="background:none;border-color:color-mix(in oklab, var(--ok) 45%, transparent)">real GA output</span>
+            <span class="tag gen" style="background:none;border-color:color-mix(in oklab, var(--ok) 45%, transparent)">real output, released SDK</span>
           </div>
           <div class="codelines" data-role="output-code"></div>
           <div class="placeholder">nothing serialized yet<br><span style="opacity:.6">press &ldquo;Serialize&rdquo;</span></div>
@@ -217,16 +253,18 @@ JsonSerializer.Serialize(new PetUnion(new Cat("Misty", 9)));
     <section data-part="csharp" data-title="Closed hierarchies">
       <h2>Closed hierarchies <span class="badge stable">stable</span></h2>
       <figure class="code-window" data-code data-lang="csharp"
-              data-file="Gate.cs" data-tag="C# 15" data-steps="1|2-3|5-10">
+              data-file="Payment.cs" data-tag="C# 15" data-steps="1|2-4|6-12">
         <script type="text/template">
-public closed record class GateState;          // only this assembly may derive
-public record class Closed : GateState;
-public record class Open(float Percent) : GateState;
+public closed record class Payment;            // only this assembly may derive
+public record class Pending : Payment;
+public record class Paid(decimal Amount) : Payment;
+public record class Refunded(string Reason) : Payment;
 
-string Describe(GateState state) => state switch
+string Describe(Payment payment) => payment switch
 {
-    Closed => "closed",
-    Open(var percent) => $"{percent}% open",
+    Pending => "waiting for the bank",
+    Paid(var amount) => $"paid {amount}",
+    Refunded(var reason) => $"refunded: {reason}",
     // no warning: every direct descendant is handled
 };
         </script>
@@ -234,7 +272,7 @@ string Describe(GateState state) => state switch
       <p class="lead fragment fade-up small"><code>closed</code> implies <code>abstract</code>, and it is <strong>not transitive</strong>: mark intermediate types <code>closed</code> too.</p>
       <aside class="notes">
         Same exhaustiveness, but for your own type family that shares members through a
-        base class. Leave out the Open arm and you get the same CS8509 as on the union
+        base class. Leave out the Refunded arm and you get the same CS8509 as on the union
         slide, which I checked on GA. Union or closed? A union's cases can be any existing
         types (int, string, third-party) with no shared members; it's a struct and boxes
         value-type cases. A closed class's cases are your own derived types sharing a
@@ -279,7 +317,7 @@ outer: for (int row = 0; row < grid.Height; row++)
 }
           </script>
         </figure>
-        <p class="lead small">Analyzer <code>IDE0410</code> offers the rewrite from flag variables.</p>
+        <p class="lead small">Visual Studio offers the rewrite from flag variables (quick fix <code>IDE0410</code>).</p>
         <aside class="notes">Replaces the bool-found-flag pattern and the occasional goto.</aside>
       </section>
 
@@ -361,7 +399,7 @@ int third = Enumerable.Range(1, 10)[2];
           <div class="chrome">
             <span class="dots"><i></i><i></i><i></i></span>
             <span class="name">new StackTrace()</span>
-            <span class="tag gen" style="background:none;border-color:color-mix(in oklab, var(--ok) 45%, transparent)">real GA output</span>
+            <span class="tag gen" style="background:none;border-color:color-mix(in oklab, var(--ok) 45%, transparent)">real output, released SDK</span>
           </div>
           <div class="codelines" data-role="output-code"></div>
           <div class="placeholder">not run yet<br><span style="opacity:.6">press &ldquo;Run&rdquo;</span></div>
@@ -419,7 +457,7 @@ at <Main>(String[] args)
 
       <div class="stat-strip" data-role="stats">
         <span class="s">frames <b data-role="stat-lines">0</b></span>
-        <span class="s">the BCL already ships compiled with it</span>
+        <span class="s">the .NET libraries already ship compiled with it</span>
       </div>
 
       <aside class="notes">
@@ -433,25 +471,25 @@ at <Main>(String[] args)
       </aside>
     </section>
 
-    <section data-part="runtime" data-title="JIT, AOT and friends">
-      <h2>JIT, AOT and friends</h2>
+    <section data-part="runtime" data-title="Faster without code changes">
+      <h2>Faster without code changes</h2>
       <div class="grid-3">
         <div class="card fragment fade-up">
-          <h4>JIT</h4>
-          <p>More bounds checks removed (<code>values[^1]</code>, <code>i + c &lt; len</code>), generic virtual methods devirtualized</p>
+          <h4>JIT <small>(compiles as the app runs)</small></h4>
+          <p>Fewer array bounds checks (<code>values[^1]</code>, <code>i + c &lt; len</code>), more virtual calls turned into direct calls</p>
         </div>
         <div class="card fragment fade-up">
-          <h4>ReadyToRun</h4>
-          <p class="big">20&times;</p>
-          <p>faster collections, up to: specialized <code>EqualityComparer&lt;T&gt;.Default</code> is pre-compiled</p>
+          <h4>ReadyToRun <small>(pre-compiled libraries)</small></h4>
+          <p class="big">up to 20&times;</p>
+          <p>faster collections: <code>EqualityComparer&lt;T&gt;.Default</code> now ships pre-compiled</p>
         </div>
         <div class="card fragment fade-up">
-          <h4>NativeAOT</h4>
-          <p>Shared interface-dispatch helper: smaller call sites, faster interface-heavy code</p>
+          <h4>NativeAOT <small>(whole app compiled ahead of time to machine code)</small></h4>
+          <p>Smaller, faster interface calls</p>
         </div>
         <div class="card fragment fade-up">
           <h4>Hardware</h4>
-          <p><code>Half</code> uses hardware FP16 where available, <code>Math.BigMul</code> is one <code>MUL</code>, AVX-VNNI-512</p>
+          <p><code>Half</code> uses the CPU&rsquo;s 16-bit float instructions where available, <code>Math.BigMul</code> is one instruction</p>
         </div>
         <div class="card fragment fade-up">
           <h4>Diagnostics</h4>
@@ -459,7 +497,7 @@ at <Main>(String[] args)
         </div>
         <div class="card bad fragment fade-up">
           <h4>Baseline raised</h4>
-          <p>x64 needs <strong>x86-64-v2</strong>, Windows Arm64 needs <strong>LSE</strong></p>
+          <p>x64 needs <strong>x86-64-v2</strong> (roughly any CPU since 2009), Windows Arm64 needs <strong>LSE</strong> atomics</p>
         </div>
       </div>
       <aside class="notes">
@@ -506,7 +544,7 @@ Hello, Ada!
       </div>
       <ul class="rows" style="margin-top:28px">
         <li class="fragment fade-in-then-semi-out">Split across files, reference DLLs; an unchanged app relaunches without a rebuild</li>
-        <li class="fragment fade-in-then-semi-out">New analyzer <code>CA2266</code> wants the <code>#!</code> line on the entry file</li>
+        <li class="fragment fade-in-then-semi-out">A new code-analysis warning (<code>CA2266</code>) wants the <code>#!</code> line on the entry file</li>
       </ul>
       <aside class="notes">
         Checked on GA: CA2266 fires on a multi-file app without the shebang, hence line 1.
@@ -519,18 +557,18 @@ Hello, Ada!
     <section data-part="sdk" data-title="CLI and dotnet test">
       <h2>CLI and <code>dotnet test</code></h2>
       <div class="terminal">
-<span class="dim"># solution filters, from the CLI</span>
+<span class="dim"># solution filters (a subset of a solution), from the CLI</span>
 <span class="p">&gt;</span> dotnet new slnf --parent-solution MyApp.slnx --name Lib
 <span class="p">&gt;</span> dotnet sln Lib.slnf add src/Lib/Lib.csproj
 
-<span class="dim"># dotnet test on Microsoft.Testing.Platform</span>
+<span class="dim"># dotnet test on the new Microsoft.Testing.Platform runner</span>
 <span class="p">&gt;</span> dotnet test --timeout 90s --maximum-failed-tests 5
 <span class="p">&gt;</span> dotnet test dirs.proj --results-directory-layout per-module
 <span class="p">&gt;</span> dotnet new xunit --xunit-version v3
       </div>
       <ul class="rows" style="margin-top:24px">
-        <li class="fragment fade-in-then-semi-out">The <code>dotnet</code> host is <strong>NativeAOT</strong> by default: <code>--help</code> and tool launches skip ~600 ms of startup</li>
-        <li class="fragment fade-in-then-semi-out">Containers: multi-arch with Podman, reproducible digests via <code>SOURCE_DATE_EPOCH</code></li>
+        <li class="fragment fade-in-then-semi-out">The <code>dotnet</code> command itself is now compiled to machine code ahead of time (<strong>NativeAOT</strong>): <code>--help</code> and tool launches skip ~600 ms of startup</li>
+        <li class="fragment fade-in-then-semi-out">Containers: multi-platform images with Podman, and reproducible builds (same source, same image)</li>
       </ul>
       <aside class="notes">
         Live display of in-flight tests and per-assembly counts too. Container local-runtime preference changed to
@@ -623,9 +661,9 @@ var people = new HashSet<(string Name, int Age)>(byName) { ("Alice", 30), ("Alic
         <div class="card fragment fade-up"><h4>Numerics</h4><p><code>Decimal32/64/128</code> (IEEE 754), generic <code>Complex&lt;T&gt;</code>, <code>Random.NextInteger&lt;T&gt;</code></p></div>
         <div class="card fragment fade-up"><h4>Compression</h4><p><strong>Zstandard</strong> next to Brotli and GZip; ZIP passwords and CRC32 checks</p></div>
         <div class="card fragment fade-up"><h4>JSON</h4><p>Unions, <strong>JSON Lines</strong> output, more naming and ignore controls</p></div>
-        <div class="card fragment fade-up"><h4>Networking</h4><p><code>DnsResolver</code>: SRV, MX, TXT records on Windows, Linux and macOS</p></div>
+        <div class="card fragment fade-up"><h4>Networking</h4><p><code>DnsResolver</code>: look up SRV, MX and TXT records on Windows, Linux and macOS</p></div>
         <div class="card fragment fade-up"><h4>Validation</h4><p>Async <code>DataAnnotations</code>: <code>Validator.ValidateObjectAsync</code></p></div>
-        <div class="card fragment fade-up"><h4>Crypto</h4><p><code>X25519DiffieHellman</code>, AES Key Wrap</p></div>
+        <div class="card fragment fade-up"><h4>Crypto</h4><p>X25519 key exchange, AES Key Wrap</p></div>
       </div>
       <aside class="notes">
         Decimal128 is NOT a replacement for decimal &mdash; it's for interop with systems
@@ -660,7 +698,7 @@ app.MapGet("/health", [ShortCircuit] () => "Healthy");
       <ul class="rows" style="margin-top:20px">
         <li class="fragment fade-in-then-semi-out"><strong>Zstandard</strong> in the response-compression and request-decompression middleware, enabled by default there</li>
         <li class="fragment fade-in-then-semi-out"><strong>OpenAPI 3.2</strong> is the default document version</li>
-        <li class="fragment fade-in-then-semi-out"><code>dotnet new mcpserver</code> ships in the SDK</li>
+        <li class="fragment fade-in-then-semi-out"><code>dotnet new mcpserver</code>: a template for an MCP server (tools that AI agents can call), in the SDK</li>
       </ul>
       <aside class="notes">
         OpenTelemetry.Instrumentation.AspNetCore is no longer needed for the HTTP server
@@ -674,11 +712,11 @@ app.MapGet("/health", [ShortCircuit] () => "Healthy");
     <section data-part="web" data-title="Blazor">
       <h2>Blazor</h2>
       <ul class="rows">
-        <li class="fragment fade-in-then-semi-out"><strong>TempData</strong> in static SSR: Post-Redirect-Get flash messages</li>
-        <li class="fragment fade-in-then-semi-out">Client-side and <strong>async</strong> form validation in static SSR</li>
-        <li class="fragment fade-in-then-semi-out">Circuits can pause on inactive tabs (opt-in <code>AddAutoPause</code>)</li>
+        <li class="fragment fade-in-then-semi-out"><strong>TempData</strong> in static server rendering (no live connection): &ldquo;saved!&rdquo; messages after a redirect</li>
+        <li class="fragment fade-in-then-semi-out">Client-side and <strong>async</strong> form validation in static server rendering</li>
+        <li class="fragment fade-in-then-semi-out">Interactive Server sessions can pause on inactive tabs (opt-in <code>AddAutoPause</code>)</li>
         <li class="fragment fade-in-then-semi-out">QuickGrid: paging modes, sort and page in the URL, <code>OnRowClick</code></li>
-        <li class="fragment fade-in-then-semi-out">AI components (AG-UI) <span class="badge exp">experimental</span></li>
+        <li class="fragment fade-in-then-semi-out">AI chat components (AG-UI protocol) <span class="badge exp">experimental</span></li>
       </ul>
       <aside class="notes">
         QuickGrid controls now render as links &mdash; a CSS breaking change if you styled
@@ -700,7 +738,7 @@ app.MapGet("/health", [ShortCircuit] () => "Healthy");
         </div>
         <div class="card fragment fade-up">
           <h4>Complex types</h4>
-          <p>The preferred JSON mapping: TPT/TPC, indexes on nested paths. Keyless owned JSON collections are obsolete.</p>
+          <p>The preferred way to map JSON columns, now with inheritance mapping and indexes on nested properties. Keyless owned JSON collections are obsolete.</p>
         </div>
         <div class="card fragment fade-up">
           <h4>Migrations</h4>
@@ -725,10 +763,10 @@ app.MapGet("/health", [ShortCircuit] () => "Healthy");
       <table class="matrix">
         <tbody>
           <tr class="fragment fade-in"><th style="width:28%">CPU baseline</th><td>x86-64-v2 everywhere, LSE on Windows Arm64 &mdash; old machines fail at startup</td></tr>
-          <tr class="fragment fade-in"><th>Numerics</th><td><code>decimal</code> &harr; <code>double</code> now correctly rounded, <strong>no compat switch</strong></td></tr>
+          <tr class="fragment fade-in"><th>Numerics</th><td><code>decimal</code> &harr; <code>double</code> now correctly rounded, <strong>no switch to turn it off</strong></td></tr>
           <tr class="fragment fade-in"><th>Hosting</th><td><code>IHost.RunAsync</code> throws when a <code>BackgroundService</code> fails</td></tr>
-          <tr class="fragment fade-in"><th>ASP.NET Core</th><td>OpenAPI 3.2 default, OTel tags on by default</td></tr>
-          <tr class="fragment fade-in"><th>EF Core</th><td>SQL Server compat level <strong>160</strong>; SqlClient 7 moves Entra auth to <code>Microsoft.Data.SqlClient.Extensions.Azure</code></td></tr>
+          <tr class="fragment fade-in"><th>ASP.NET Core</th><td>OpenAPI 3.2 default, OpenTelemetry tags on by default</td></tr>
+          <tr class="fragment fade-in"><th>EF Core</th><td>SQL Server compatibility level <strong>160</strong>; SqlClient 7 moves Entra ID (Azure AD) sign-in to <code>Microsoft.Data.SqlClient.Extensions.Azure</code></td></tr>
           <tr class="fragment fade-in"><th>C#</th><td><code>union</code> and <code>closed</code> are contextual keywords; <code>with(...)</code> in a collection expression needs <code>@with</code> for a method</td></tr>
         </tbody>
       </table>
@@ -760,8 +798,8 @@ app.MapGet("/health", [ShortCircuit] () => "Healthy");
     </section>
     </section>
 
-    <section data-part="wrap" data-title="Still preview at GA">
-      <h2>Still preview at GA</h2>
+    <section data-part="wrap" data-title="Still preview in the release">
+      <h2>Still preview in the release</h2>
       <ul class="rows">
         <li><span class="badge preview">preview</span> C# memory-safety rules</li>
         <li><span class="badge exp">experimental</span> Blazor AI components, caller-driven TLS sessions</li>
@@ -779,7 +817,7 @@ app.MapGet("/health", [ShortCircuit] () => "Healthy");
         <div class="card fragment fade-up"><h4>C# 15</h4><p>The <code>_ =&gt;</code> arm: <code>union</code> and <code>closed</code> make the compiler check every case</p></div>
         <div class="card fragment fade-up"><h4>Runtime</h4><p>Reading past state machines: opt-in Runtime Async shows only your own frames</p></div>
         <div class="card fragment fade-up"><h4>Tooling</h4><p>The <code>.csproj</code> for a tool: <code>dotnet app.cs</code> with <code>#:include</code></p></div>
-        <div class="card fragment fade-up"><h4>Libraries &amp; web</h4><p>Process plumbing, hand-rolled joins, the OTel instrumentation package</p></div>
+        <div class="card fragment fade-up"><h4>Libraries &amp; web</h4><p>Process plumbing, hand-rolled joins, the OpenTelemetry instrumentation package</p></div>
       </div>
       <blockquote class="pull hero fragment fade-up">
         <p>Start with unions. They change how you model a domain.</p>

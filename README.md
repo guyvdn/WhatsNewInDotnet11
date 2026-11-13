@@ -15,6 +15,7 @@ Status: GA (11.0.0, 10 Nov 2026). .NET 11 is an **STS** release, supported until
 | `examples/Dotnet11Demo` | Every C# 15 and library snippet from the deck, compiled and run on GA (SDK 11.0.100) |
 | `examples/RuntimeAsyncDemo` | The stack-trace comparison behind the Runtime Async slide |
 | `examples/FileBasedApp` | `dotnet run app.cs` with `#:include` |
+| `examples/ResultUnion` | A union as a mediator handler's result, mapped to HTTP: `dotnet run app.cs` |
 
 ## Running the deck
 
