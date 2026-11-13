@@ -5,7 +5,7 @@
 /* --------------------------------------------------------------------------
    exhaustive — a fake editor with a non-exhaustive switch over a union.
    The light bulb adds the missing arm; CS8509 clears and the build goes green.
-   The diagnostic text is copied from a real build on 11.0.100-rc.1.
+   The diagnostic text is copied from a real build on 11.0.100 (GA).
    -------------------------------------------------------------------------- */
 DeckWidgets.register('exhaustive', function (el) {
   const { $ } = DeckWidgets.helpers;

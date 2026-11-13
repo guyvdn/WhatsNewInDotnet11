@@ -38,55 +38,26 @@
     <section data-part="intro" data-title="Title" class="title-slide" data-transition="fade">
       <span class="eyebrow">.NET 11 &middot; C# 15</span>
       <h1>What's new in .NET 11</h1>
-      <h2>Unions, async in the runtime, and a pile of small wins</h2>
+      <h2>Less code to write, less code to trust</h2>
       <p class="tagline">Guy Van den Nieuwenhof</p>
       <div class="meta">
         <span class="chip">GA <b>10 Nov 2026</b></span>
-        <span class="chip"><b>STS</b> &middot; 2 years</span>
+        <span class="chip"><b>STS</b> &middot; until 14 Nov 2028</span>
         <span class="chip">press <b>?</b> for keys</span>
       </div>
       <aside class="notes">
-        25 minutes. Six areas, one headline each: unions in C# 15, Runtime Async,
+        25 minutes. The thread: every part is something you no longer have to write
+        yourself &mdash; or trust yourself to get right. Unions in C# 15, Runtime Async,
         file-based apps, Process and LINQ, built-in OpenTelemetry, EF Core FullJoin.
-        The C# and library code was compiled and run on 11.0.100-rc.1 (examples/ in the
+        GA shipped 10 Nov (11.0.0, SDK 11.0.100). STS: .NET 10 (LTS) and .NET 11 both
+        reach end of support on 14 Nov 2028, so .NET 11 buys features, not a longer
+        runway. Upgrade where the features pay, stay on 10 where stability matters more.
+        The C# and library code was compiled and run on the GA SDK (examples/ in the
         repo). ASP.NET Core and EF Core snippets are from the Learn docs, not compiled.
+        Badges: stable, opt-in, preview, experimental.
       </aside>
     </section>
 
-    <section data-part="intro" data-title="Where we are">
-      <h2>Where we are</h2>
-      <div class="timeline">
-        <div class="step done">
-          <div class="when">8 Sep 2026</div>
-          <div class="what">RC1</div>
-          <div class="why">Feature-complete, go-live licence. C# 15 is the default.</div>
-        </div>
-        <div class="step now">
-          <div class="when">October</div>
-          <div class="what">RC2</div>
-          <div class="why">Bug fixes plus small polish. Nothing removed so far.</div>
-        </div>
-        <div class="step">
-          <div class="when">10 Nov 2026</div>
-          <div class="what">GA</div>
-          <div class="why">General availability.</div>
-        </div>
-        <div class="step">
-          <div class="when">9 Nov 2028</div>
-          <div class="what">End of support</div>
-          <div class="why"><b>STS</b>: 24 months &mdash; the same month .NET 10 (LTS) ends.</div>
-        </div>
-      </div>
-      <ul class="rows" style="margin-top:40px">
-        <li class="fragment fade-in-then-semi-out">C# and library snippets were <strong>compiled and run on RC1</strong> &mdash; see <code>examples/</code></li>
-        <li class="fragment fade-in-then-semi-out">Stable features get <span class="badge stable">stable</span>, opt-in features get <span class="badge preview">preview</span></li>
-      </ul>
-      <aside class="notes">
-        STS matters for clients: .NET 10 (LTS) and .NET 11 (STS) both reach end of support in
-        November 2028, so .NET 11 buys features, not a longer runway. Upgrade where the features pay, stay on 10
-        where stability matters more.
-      </aside>
-    </section>
 
     <!-- ==================================================================
          C# 15
@@ -95,7 +66,7 @@
     <section data-part="csharp" data-title="Part 1 — C# 15" class="part-divider" data-transition="zoom">
       <div class="kicker">Part one</div>
       <h1>C# 15</h1>
-      <p class="sub">The type system finally says &ldquo;exactly one of these&rdquo;</p>
+      <p class="sub">No more default arm that hides the case you forgot</p>
       <div class="rule"></div>
       <aside class="notes">Unions are the headline of the whole release. Spend the time here.</aside>
     </section>
@@ -146,7 +117,7 @@ string name = pet switch
         <button class="btn" data-role="reset">Reset <span class="kbd">R</span></button>
       </div>
       <aside class="notes">
-        The warning text is verbatim from an RC1 build. The point: add a fourth case to
+        The warning text is verbatim from a GA build (11.0.100). The point: add a fourth case to
         Pet and every switch in the solution lights up. With an interface or a base class
         you'd have a silent default arm instead. Add TreatWarningsAsErrors for CS8509 and
         it's a build break.
@@ -191,7 +162,7 @@ string name = pet switch
           <div class="chrome">
             <span class="dots"><i></i><i></i><i></i></span>
             <span class="name">output.json</span>
-            <span class="tag gen" style="background:none;border-color:color-mix(in oklab, var(--ok) 45%, transparent)">real RC1 output</span>
+            <span class="tag gen" style="background:none;border-color:color-mix(in oklab, var(--ok) 45%, transparent)">real GA output</span>
           </div>
           <div class="codelines" data-role="output-code"></div>
           <div class="placeholder">nothing serialized yet<br><span style="opacity:.6">press &ldquo;Serialize&rdquo;</span></div>
@@ -264,29 +235,14 @@ string Describe(GateState state) => state switch
       <aside class="notes">
         Same exhaustiveness, but for your own type family that shares members through a
         base class. Leave out the Open arm and you get the same CS8509 as on the union
-        slide, which I checked on RC1.
+        slide, which I checked on GA. Union or closed? A union's cases can be any existing
+        types (int, string, third-party) with no shared members; it's a struct and boxes
+        value-type cases. A closed class's cases are your own derived types sharing a
+        base. Rule of thumb: where you'd write OneOf&lt;A, B&gt; or a Result type, it's a
+        union; where you'd write an abstract base and a few records, it's closed.
       </aside>
     </section>
 
-    <section data-part="csharp" data-title="Union or closed?">
-      <h2>Union or closed?</h2>
-      <table class="matrix">
-        <thead>
-          <tr><th style="width:26%"></th><th><code>union</code></th><th><code>closed</code> class</th></tr>
-        </thead>
-        <tbody>
-          <tr class="fragment fade-in"><th>Cases are</th><td>any existing types &mdash; <code>int</code>, <code>string</code>, third-party</td><td>your own derived types</td></tr>
-          <tr class="fragment fade-in"><th>Shared members</th><td>none required</td><td>through the base class</td></tr>
-          <tr class="fragment fade-in"><th>Shape</th><td>struct, cases boxed</td><td>ordinary reference types</td></tr>
-          <tr class="fragment fade-in"><th>Exhaustive <code>switch</code></th><td class="win">yes</td><td class="win">yes</td></tr>
-          <tr class="fragment fade-in"><th>Reach for it when</th><td>&ldquo;returns A <em>or</em> B&rdquo;</td><td>&ldquo;a state machine I own&rdquo;</td></tr>
-        </tbody>
-      </table>
-      <aside class="notes">
-        Rule of thumb: if you'd otherwise write OneOf&lt;A, B&gt; or a Result type,
-        it's a union. If you'd write an abstract base class and a few records, it's closed.
-      </aside>
-    </section>
 
     <section>
       <section data-part="csharp" data-title="Small things: collection arguments">
@@ -350,7 +306,7 @@ int third = Enumerable.Range(1, 10)[2];
         <ul class="rows">
           <li>Pointer <em>types</em>, <code>&amp;</code>, <code>fixed</code> and <code>sizeof</code> no longer need <code>unsafe</code></li>
           <li>Only <strong>dereferencing</strong> does &mdash; <code>unsafe(expr)</code> scopes it to one expression</li>
-          <li>Needs <code>LangVersion preview</code> plus a feature flag; Roslyn already calls it <strong>C# 16</strong></li>
+          <li>Needs <code>LangVersion preview</code>; Roslyn already calls it <strong>C# 16</strong></li>
         </ul>
         <aside class="notes">Mention only. Don't put this in client code.</aside>
       </section>
@@ -363,13 +319,13 @@ int third = Enumerable.Range(1, 10)[2];
     <section data-part="runtime" data-title="Part 2 — Runtime" class="part-divider" data-transition="zoom">
       <div class="kicker">Part two</div>
       <h1>Runtime</h1>
-      <p class="sub">async moves out of the compiler and into the runtime</p>
+      <p class="sub">No more state machines cluttering your stack traces</p>
       <div class="rule"></div>
       <aside class="notes">Same source code, a different implementation underneath.</aside>
     </section>
 
     <section data-part="runtime" data-title="Runtime Async" data-interactive>
-      <h2>Runtime Async <span class="badge preview">preview</span></h2>
+      <h2>Runtime Async <span class="badge stable">opt-in</span></h2>
 
       <div class="toolbar" data-widget="pipeline-toolbar">
         <span class="label">runtime-async</span>
@@ -405,7 +361,7 @@ int third = Enumerable.Range(1, 10)[2];
           <div class="chrome">
             <span class="dots"><i></i><i></i><i></i></span>
             <span class="name">new StackTrace()</span>
-            <span class="tag gen" style="background:none;border-color:color-mix(in oklab, var(--ok) 45%, transparent)">real RC1 output</span>
+            <span class="tag gen" style="background:none;border-color:color-mix(in oklab, var(--ok) 45%, transparent)">real GA output</span>
           </div>
           <div class="codelines" data-role="output-code"></div>
           <div class="placeholder">not run yet<br><span style="opacity:.6">press &ldquo;Run&rdquo;</span></div>
@@ -467,12 +423,13 @@ at <Main>(String[] args)
       </div>
 
       <aside class="notes">
-        Measured on RC1 with examples/RuntimeAsyncDemo: 13 frames off, 5 on. Frame names
+        Measured on GA (11.0.100) with examples/RuntimeAsyncDemo: 13 frames off, 5 on. Frame names
         are shortened for the slide. Be honest about it: exception stack traces already
         looked like this; the win is in live stacks &mdash; profilers, the debugger's
-        call-stack window &mdash; plus fewer allocations. For your own code it's still
-        opt-in preview; the framework libraries already use it, so test AsyncLocal and
-        ExecutionContext-heavy code on upgrade.
+        call-stack window &mdash; plus fewer allocations. No longer preview at GA: no
+        EnablePreviewFeatures needed, but still opt-in for your own code. The framework
+        libraries already use it (opt out with UseRuntimeAsync=false), so test AsyncLocal
+        and ExecutionContext-heavy code on upgrade.
       </aside>
     </section>
 
@@ -486,7 +443,7 @@ at <Main>(String[] args)
         <div class="card fragment fade-up">
           <h4>ReadyToRun</h4>
           <p class="big">20&times;</p>
-          <p>up to, for collections, from specialized <code>EqualityComparer&lt;T&gt;.Default</code></p>
+          <p>faster collections, up to: specialized <code>EqualityComparer&lt;T&gt;.Default</code> is pre-compiled</p>
         </div>
         <div class="card fragment fade-up">
           <h4>NativeAOT</h4>
@@ -498,7 +455,7 @@ at <Main>(String[] args)
         </div>
         <div class="card fragment fade-up">
           <h4>Diagnostics</h4>
-          <p>In-process crash report with the managed stack: <code>DOTNET_EnableCrashReport=1</code></p>
+          <p>In-process crash report with the managed stack on Linux/macOS: <code>DOTNET_EnableCrashReport=1</code></p>
         </div>
         <div class="card bad fragment fade-up">
           <h4>Baseline raised</h4>
@@ -520,7 +477,7 @@ at <Main>(String[] args)
     <section data-part="sdk" data-title="Part 3 — SDK & CLI" class="part-divider" data-transition="zoom">
       <div class="kicker">Part three</div>
       <h1>SDK &amp; CLI</h1>
-      <p class="sub"><code>dotnet app.cs</code> grows up</p>
+      <p class="sub">No more <code>.csproj</code> just to write a real tool</p>
       <div class="rule"></div>
       <aside class="notes">File-based apps arrived in .NET 10. In 11 they become usable for real tools.</aside>
     </section>
@@ -552,7 +509,8 @@ Hello, Ada!
         <li class="fragment fade-in-then-semi-out">New analyzer <code>CA2266</code> wants the <code>#!</code> line on the entry file</li>
       </ul>
       <aside class="notes">
-        Ran this on RC1; CA2266 fired on my first attempt without the shebang, hence line 1.
+        Checked on GA: CA2266 fires on a multi-file app without the shebang, hence line 1.
+        Including .cs files also landed in SDK 10.0.300; DLL includes are 11 only.
         dotnet run -e is new in general, not only for file-based apps. RC2 adds quoted
         #:property values and Name=Value metadata on #:package.
       </aside>
@@ -562,8 +520,8 @@ Hello, Ada!
       <h2>CLI and <code>dotnet test</code></h2>
       <div class="terminal">
 <span class="dim"># solution filters, from the CLI</span>
-<span class="p">&gt;</span> dotnet new slnf --name MyApp.slnf
-<span class="p">&gt;</span> dotnet sln MyApp.slnf add src/Lib/Lib.csproj
+<span class="p">&gt;</span> dotnet new slnf --parent-solution MyApp.slnx --name Lib
+<span class="p">&gt;</span> dotnet sln Lib.slnf add src/Lib/Lib.csproj
 
 <span class="dim"># dotnet test on Microsoft.Testing.Platform</span>
 <span class="p">&gt;</span> dotnet test --timeout 90s --maximum-failed-tests 5
@@ -575,9 +533,7 @@ Hello, Ada!
         <li class="fragment fade-in-then-semi-out">Containers: multi-arch with Podman, reproducible digests via <code>SOURCE_DATE_EPOCH</code></li>
       </ul>
       <aside class="notes">
-        Live display of in-flight tests and per-assembly counts too. RC1 known issue:
-        relative project paths can crash dotnet test (dotnet/sdk#56196) &mdash; use an
-        absolute path if you demo it. Container local-runtime preference changed to
+        Live display of in-flight tests and per-assembly counts too. Container local-runtime preference changed to
         wslc / container before Docker: a breaking change for some build scripts.
       </aside>
     </section>
@@ -589,7 +545,7 @@ Hello, Ada!
     <section data-part="libs" data-title="Part 4 — Libraries" class="part-divider" data-transition="zoom">
       <div class="kicker">Part four</div>
       <h1>Libraries</h1>
-      <p class="sub">The boilerplate you copy-pasted for a decade</p>
+      <p class="sub">No more helpers copy-pasted for a decade</p>
       <div class="rule"></div>
       <aside class="notes">Quick tour. Two code slides, one grab-bag.</aside>
     </section>
@@ -666,7 +622,7 @@ var people = new HashSet<(string Name, int Age)>(byName) { ("Alice", 30), ("Alic
         <div class="card fragment fade-up"><h4>Numerics</h4><p><code>Decimal32/64/128</code> (IEEE 754), generic <code>Complex&lt;T&gt;</code>, <code>Random.NextInteger&lt;T&gt;</code></p></div>
         <div class="card fragment fade-up"><h4>Compression</h4><p><strong>Zstandard</strong> next to Brotli and GZip; ZIP passwords and CRC32 checks</p></div>
         <div class="card fragment fade-up"><h4>JSON</h4><p>Unions, <strong>JSON Lines</strong> output, more naming and ignore controls</p></div>
-        <div class="card fragment fade-up"><h4>Networking</h4><p><code>DnsResolver</code>: SRV, MX, TXT records with TTL, on every OS</p></div>
+        <div class="card fragment fade-up"><h4>Networking</h4><p><code>DnsResolver</code>: SRV, MX, TXT records on Windows, Linux and macOS</p></div>
         <div class="card fragment fade-up"><h4>Validation</h4><p>Async <code>DataAnnotations</code>: <code>Validator.ValidateObjectAsync</code></p></div>
         <div class="card fragment fade-up"><h4>Crypto</h4><p><code>X25519DiffieHellman</code>, AES Key Wrap</p></div>
       </div>
@@ -683,7 +639,7 @@ var people = new HashSet<(string Name, int Age)>(byName) { ("Alice", 30), ("Alic
     <section data-part="web" data-title="Part 5 — ASP.NET & EF Core" class="part-divider" data-transition="zoom">
       <div class="kicker">Part five</div>
       <h1>ASP.NET Core<br>&amp; EF Core</h1>
-      <p class="sub">Fewer packages, faster queries</p>
+      <p class="sub">No more instrumentation package, no more wasted joins</p>
       <div class="rule"></div>
       <aside class="notes">Two slides each. Pick based on the room.</aside>
     </section>
@@ -719,7 +675,7 @@ app.MapGet("/health", [ShortCircuit] () => "Healthy");
       <ul class="rows">
         <li class="fragment fade-in-then-semi-out"><strong>TempData</strong> in static SSR: Post-Redirect-Get flash messages</li>
         <li class="fragment fade-in-then-semi-out">Client-side and <strong>async</strong> form validation in static SSR</li>
-        <li class="fragment fade-in-then-semi-out">Circuits pause automatically on inactive tabs</li>
+        <li class="fragment fade-in-then-semi-out">Circuits can pause on inactive tabs (opt-in <code>AddAutoPause</code>)</li>
         <li class="fragment fade-in-then-semi-out">QuickGrid: paging modes, sort and page in the URL, <code>OnRowClick</code></li>
         <li class="fragment fade-in-then-semi-out">AI components (AG-UI) <span class="badge exp">experimental</span></li>
       </ul>
@@ -743,7 +699,7 @@ app.MapGet("/health", [ShortCircuit] () => "Healthy");
         </div>
         <div class="card fragment fade-up">
           <h4>Complex types</h4>
-          <p>Now the default over owned types: TPT/TPC, indexes on nested paths, JSON</p>
+          <p>The preferred JSON mapping: TPT/TPC, indexes on nested paths. Keyless owned JSON collections are obsolete.</p>
         </div>
         <div class="card fragment fade-up">
           <h4>Migrations</h4>
@@ -771,8 +727,8 @@ app.MapGet("/health", [ShortCircuit] () => "Healthy");
           <tr class="fragment fade-in"><th>Numerics</th><td><code>decimal</code> &harr; <code>double</code> now correctly rounded, <strong>no compat switch</strong></td></tr>
           <tr class="fragment fade-in"><th>Hosting</th><td><code>IHost.RunAsync</code> throws when a <code>BackgroundService</code> fails</td></tr>
           <tr class="fragment fade-in"><th>ASP.NET Core</th><td>OpenAPI 3.2 default, OTel tags on by default</td></tr>
-          <tr class="fragment fade-in"><th>EF Core</th><td>SQL Server compatibility level <strong>160</strong> by default</td></tr>
-          <tr class="fragment fade-in"><th>C#</th><td><code>union</code>, <code>closed</code>, <code>with(...)</code> are contextual keywords now</td></tr>
+          <tr class="fragment fade-in"><th>EF Core</th><td>SQL Server compat level <strong>160</strong>; SqlClient 7 moves Entra auth to <code>Microsoft.Data.SqlClient.Extensions.Azure</code></td></tr>
+          <tr class="fragment fade-in"><th>C#</th><td><code>union</code> and <code>closed</code> are contextual keywords; <code>with(...)</code> in a collection expression needs <code>@with</code> for a method</td></tr>
         </tbody>
       </table>
       <aside class="notes">
@@ -806,24 +762,23 @@ app.MapGet("/health", [ShortCircuit] () => "Healthy");
     <section data-part="wrap" data-title="Still preview at GA">
       <h2>Still preview at GA</h2>
       <ul class="rows">
-        <li><span class="badge preview">preview</span> Runtime Async in <em>your</em> code (the BCL already uses it)</li>
         <li><span class="badge preview">preview</span> C# memory-safety rules</li>
         <li><span class="badge exp">experimental</span> Blazor AI components, caller-driven TLS sessions</li>
         <li><span class="badge exp">experimental</span> <code>dotnet test --affected-tests</code>, EF Core SQL Server vector search</li>
       </ul>
       <aside class="notes">
         Try them on a branch, not in a client's main line. Everything else in the deck is
-        stable at RC1 with a go-live licence.
+        stable and supported at GA. Runtime Async came off preview at GA: it's opt-in, not experimental.
       </aside>
     </section>
 
     <section data-part="wrap" data-title="In summary">
-      <h2>In summary</h2>
+      <h2>What you no longer write</h2>
       <div class="grid-2">
-        <div class="card fragment fade-up"><h4>C# 15</h4><p><code>union</code> and <code>closed</code>: exhaustive switches, checked by the compiler</p></div>
-        <div class="card fragment fade-up"><h4>Runtime</h4><p>async in the runtime, shorter stacks, a faster JIT</p></div>
-        <div class="card fragment fade-up"><h4>Tooling</h4><p>file-based apps that scale, a faster CLI, a better <code>dotnet test</code></p></div>
-        <div class="card fragment fade-up"><h4>Libraries &amp; web</h4><p>Process, FullJoin, built-in OTel, faster EF queries</p></div>
+        <div class="card fragment fade-up"><h4>C# 15</h4><p>The <code>_ =&gt;</code> arm: <code>union</code> and <code>closed</code> make the compiler check every case</p></div>
+        <div class="card fragment fade-up"><h4>Runtime</h4><p>Reading past state machines: opt-in Runtime Async shows only your own frames</p></div>
+        <div class="card fragment fade-up"><h4>Tooling</h4><p>The <code>.csproj</code> for a tool: <code>dotnet app.cs</code> with <code>#:include</code></p></div>
+        <div class="card fragment fade-up"><h4>Libraries &amp; web</h4><p>Process plumbing, hand-rolled joins, the OTel package</p></div>
       </div>
       <blockquote class="pull hero fragment fade-up">
         <p>Start with unions. They change how you model a domain.</p>
