@@ -94,7 +94,9 @@ string name = pet switch
         Step 1: the case types are just records &mdash; they don't share a base class.
         Step 2: assignment converts implicitly. Step 3: the switch is exhaustive, so no
         default arm. Under the hood it lowers to a struct with an object? Value
-        property, so value-type cases are boxed &mdash; worth knowing for hot paths.
+        property, so value-type cases are boxed &mdash; worth knowing for hot paths. The way
+        around it: write your own union type ([Union] attribute plus IUnion, with
+        HasValue / TryGetValue), and pattern matching reads the cases without boxing.
       </aside>
     </section>
 
@@ -156,7 +158,10 @@ app.MapPost("/orders", async (CreateOrder command, CreateOrderHandler handler) =
         The warning text is verbatim from a GA build (11.0.100). The point: add a fourth case to
         Pet and every switch in the solution lights up. With an interface or a base class
         you'd have a silent default arm instead. Add TreatWarningsAsErrors for CS8509 and
-        it's a build break.
+        it's a build break. One honest caveat: a default union holds null &mdash;
+        an uninitialized field or array element &mdash; and then this "exhaustive" switch
+        throws SwitchExpressionException with no warning. Add a null arm, not _ =&gt;, so a
+        new case still warns. Checked on the released SDK.
       </aside>
     </section>
 
