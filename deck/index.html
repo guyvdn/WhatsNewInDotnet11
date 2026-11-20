@@ -72,7 +72,7 @@
     </section>
 
     <section data-part="csharp" data-title="Union types">
-      <h2>Union types <span class="badge stable">stable</span></h2>
+      <h2>Union types</h2>
       <figure class="code-window" data-code data-lang="csharp"
               data-file="Pets.cs" data-tag="C# 15" data-steps="1-4|6|7-12">
         <script type="text/template">
@@ -94,9 +94,47 @@ string name = pet switch
         Step 1: the case types are just records &mdash; they don't share a base class.
         Step 2: assignment converts implicitly. Step 3: the switch is exhaustive, so no
         default case. Under the hood it lowers to a struct with an object? Value
-        property, so value-type cases are boxed &mdash; worth knowing for hot paths. The way
-        around it: write your own union type ([Union] attribute plus IUnion, with
-        HasValue / TryGetValue), and pattern matching reads the cases without boxing.
+        property, so value-type cases are boxed &mdash; worth knowing for hot paths. Next
+        slide: the way around it.
+      </aside>
+    </section>
+
+    <section data-part="csharp" data-title="Unions without boxing">
+      <h2>Unions without boxing</h2>
+      <figure class="code-window" data-code data-lang="csharp"
+              data-file="Pet.cs" data-tag="[Union] + IUnion" data-steps="1-3|5|7-11|13-16|17">
+        <script type="text/template">
+public readonly record struct Cat(string Name);   // value types now, so
+public readonly record struct Dog(string Name);   // `union Pet(Cat, Dog, Bird)`
+public readonly record struct Bird(string Name);  // would box every one
+
+[Union] public readonly struct Pet : IUnion
+{
+    readonly byte _case; readonly Cat _cat; readonly Dog _dog; readonly Bird _bird;
+
+    public Pet(Cat value) => (_case, _cat) = (1, value);
+    public Pet(Dog value) => (_case, _dog) = (2, value);
+    public Pet(Bird value) => (_case, _bird) = (3, value);
+
+    public bool HasValue => _case != 0;
+    public bool TryGetValue(out Cat value) { value = _cat; return _case == 1; }
+    public bool TryGetValue(out Dog value) { value = _dog; return _case == 2; }
+    public bool TryGetValue(out Bird value) { value = _bird; return _case == 3; }
+    public object? Value => _case switch { 1 => _cat, 2 => _dog, 3 => _bird, _ => null };
+}
+        </script>
+      </figure>
+      <aside class="notes">
+        Same pets, but as value types &mdash; with records (classes) there is nothing to box.
+        Step 1: the union keyword would store each one as object?, a box per value.
+        Step 2: [Union] plus IUnion, both in System.Runtime.CompilerServices; this is what
+        the union keyword generates for you. Step 3: one field per case and a tag, where 0
+        means default, no pet; the public constructors are what make Cat, Dog and Bird the case types, and they give
+        you the same implicit conversions. Step 4: the non-boxing access pattern &mdash;
+        the switch on the previous slide now calls TryGetValue, so it compiles unchanged
+        and allocates nothing. Step 5: Value is still required; it boxes, but only when
+        someone asks for it. Measured on GA: the union keyword allocates 24 bytes per
+        match, this one zero. Runnable in examples/NonBoxingUnion.
       </aside>
     </section>
 
@@ -174,6 +212,7 @@ app.MapPost("/orders", async (CreateOrder command, CreateOrderHandler handler) =
           <button data-kind="Int" aria-selected="true">Reading(42)</button>
           <button data-kind="String">Reading("hello")</button>
           <button data-kind="Cat">PetUnion(Cat)</button>
+          <button data-kind="Event">Event(Created, Deleted)</button>
         </div>
         <button class="btn primary" data-role="build">&#9654; Serialize <span class="kbd">B</span></button>
         <button class="btn" data-role="reset">Reset</button>
@@ -240,6 +279,20 @@ JsonSerializer.Serialize(new PetUnion(new Cat("Misty", 9)));
 // reading it back: "Lives" is what makes it a Cat
 {"Name":"Misty","Lives":9}
         </script>
+        <script type="text/template" data-variant="Event" data-side="in">
+[JsonUnion(TypeClassifier = typeof(ByType))]
+public union Event(Created, Deleted);
+public sealed record Created(int Id)
+    { public string Type => "Created"; }
+public sealed record Deleted(int Id)
+    { public string Type => "Deleted"; }
+
+JsonSerializer.Serialize(new Event(new Created(42)));
+        </script>
+        <script type="text/template" data-variant="Event" data-side="out">
+// same shape as Deleted: ByType reads "Type" back
+{"Id":42,"Type":"Created"}
+        </script>
       </div>
 
       <div class="stat-strip" data-role="stats">
@@ -251,12 +304,22 @@ JsonSerializer.Serialize(new PetUnion(new Cat("Misty", 9)));
         Deserialization picks the case by JSON token kind: number means int, string
         means string. Two object cases need a classifier; the structural one matches on
         root-level property names. No match or two matches throws JsonException.
+        If two cases have the same shape, say Dog(Name) and Cat(Name), nothing in the
+        JSON can tell them apart: the structural classifier refuses the union with
+        NotSupportedException on first use, before reading any JSON. The union writes no
+        "$type", so the JSON has to carry the signal itself (last variant): each case
+        gets a Type property, and ByType is a small JsonTypeClassifierFactory
+        that reads "Type" and returns the union case with that name, or null, which the
+        serializer turns into a JsonException. The classifier gets its own copy of the
+        reader, so reading ahead doesn't consume the value. Full code in
+        examples/Dotnet11Demo/Unions.cs. If you own the format and don't need a union,
+        a class hierarchy with JsonDerivedType writes "$type" for you.
         Not supported: route/query/header/form binding, MessagePack, Newtonsoft.
       </aside>
     </section>
 
     <section data-part="csharp" data-title="Closed hierarchies">
-      <h2>Closed hierarchies <span class="badge stable">stable</span></h2>
+      <h2>Closed hierarchies</h2>
       <figure class="code-window" data-code data-lang="csharp"
               data-file="Payment.cs" data-tag="C# 15" data-steps="1|2-4|6-12">
         <script type="text/template">

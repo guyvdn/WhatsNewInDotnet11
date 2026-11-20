@@ -19,6 +19,26 @@ public union PetUnion(JsonDog, JsonCat);
 public sealed record JsonDog(string Name, string Breed);
 public sealed record JsonCat(string Name, int Lives);
 
+// Same shape, so the structural classifier refuses them. The cases carry their own
+// "Type" and ByType picks the union case with that name.
+[JsonUnion(TypeClassifier = typeof(ByType))]
+public union Event(Created, Deleted);
+public sealed record Created(int Id) { public string Type => "Created"; }
+public sealed record Deleted(int Id) { public string Type => "Deleted"; }
+
+public sealed class ByType : JsonTypeClassifierFactory
+{
+    public override bool CanClassify(JsonTypeClassifierContext context) => true;
+
+    // The classifier gets its own copy of the reader: reading ahead doesn't consume the value.
+    // Returning null makes the serializer throw JsonException.
+    public override JsonTypeClassifier CreateJsonClassifier(JsonTypeClassifierContext context, JsonSerializerOptions options) =>
+        (ref Utf8JsonReader reader) =>
+            JsonDocument.ParseValue(ref reader).RootElement.TryGetProperty("Type", out var type)
+                ? context.UnionCases.FirstOrDefault(c => c.CaseType.Name == type.GetString())?.CaseType
+                : null;
+}
+
 public static class Unions
 {
     public static string NameOf(Pet pet) => pet switch
@@ -46,5 +66,8 @@ public static class Unions
 
         var back = JsonSerializer.Deserialize<PetUnion>("""{"Name":"Misty","Lives":9}""");
         Console.WriteLine(back.Value);
+
+        Console.WriteLine(JsonSerializer.Serialize(new Event(new Created(42))));
+        Console.WriteLine(JsonSerializer.Deserialize<Event>("""{"Id":42,"Type":"Deleted"}""").Value);
     }
 }
