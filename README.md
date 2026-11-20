@@ -29,7 +29,7 @@ notes.
 
 | Interactive slide | What it does |
 |---|---|
-| The compiler has your back | A `switch` over a union misses a case: CS8509 (text from a real GA build). The light bulb adds the arm and the build goes green. |
+| The compiler has your back | A `switch` over a union misses a case: CS8509 (text from a real GA build). The light bulb adds the missing case and the build goes green. |
 | Unions on the wire | Serializes `Reading(42)`, `Reading("hello")` and a `PetUnion` with System.Text.Json: the active case only, no wrapper, no `$type`. |
 | Runtime Async | The same code with `runtime-async` off and on: 13 frames vs 5, measured on GA. |
 

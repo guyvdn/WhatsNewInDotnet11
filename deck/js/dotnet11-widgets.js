@@ -4,7 +4,7 @@
 
 /* --------------------------------------------------------------------------
    exhaustive — a fake editor with a non-exhaustive switch over a union.
-   The light bulb adds the missing arm; CS8509 clears and the build goes green.
+   The light bulb adds the missing case; CS8509 clears and the build goes green.
    The diagnostic text is copied from a real build on 11.0.100 (GA).
    -------------------------------------------------------------------------- */
 DeckWidgets.register('exhaustive', function (el) {
@@ -28,7 +28,7 @@ DeckWidgets.register('exhaustive', function (el) {
   const ADDED = [7, '    Bird b => $"{b.Name} sings",'];
   const ERR_BAD = "<b>CS8509</b>&nbsp; The switch expression does not handle all possible values of its " +
                   "input type (it is not exhaustive). For example, the pattern 'Bird' is not covered.";
-  const ERR_OK = 'every case of <b>Pet</b> handled &mdash; no <code>_ =&gt;</code> arm needed';
+  const ERR_OK = 'every case of <b>Pet</b> handled &mdash; no <code>_ =&gt;</code> case needed';
   const FIXES = ['Add missing cases'];
   const FIX_HDR = 'CS8509 &nbsp;&middot;&nbsp; Program.cs';
 

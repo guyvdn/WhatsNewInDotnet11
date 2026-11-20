@@ -66,7 +66,7 @@
     <section data-part="csharp" data-title="Part 1 — C# 15" class="part-divider" data-transition="zoom">
       <div class="kicker">Part one</div>
       <h1>C# 15</h1>
-      <p class="sub">No more default arm that hides the case you forgot</p>
+      <p class="sub">No more default case that hides the one you forgot</p>
       <div class="rule"></div>
       <aside class="notes">Unions are the headline of the whole release. Spend the time here.</aside>
     </section>
@@ -86,14 +86,14 @@ string name = pet switch
 {
     Dog d => d.Name,
     Cat c => c.Name,
-    Bird b => b.Name,              // no `_ =>` arm needed
+    Bird b => b.Name,              // no `_ =>` case needed
 };
         </script>
       </figure>
       <aside class="notes">
         Step 1: the case types are just records &mdash; they don't share a base class.
         Step 2: assignment converts implicitly. Step 3: the switch is exhaustive, so no
-        default arm. Under the hood it lowers to a struct with an object? Value
+        default case. Under the hood it lowers to a struct with an object? Value
         property, so value-type cases are boxed &mdash; worth knowing for hot paths. The way
         around it: write your own union type ([Union] attribute plus IUnion, with
         HasValue / TryGetValue), and pattern matching reads the cases without boxing.
@@ -157,10 +157,10 @@ app.MapPost("/orders", async (CreateOrder command, CreateOrderHandler handler) =
       <aside class="notes">
         The warning text is verbatim from a GA build (11.0.100). The point: add a fourth case to
         Pet and every switch in the solution lights up. With an interface or a base class
-        you'd have a silent default arm instead. Add TreatWarningsAsErrors for CS8509 and
+        you'd have a silent default case instead. Add TreatWarningsAsErrors for CS8509 and
         it's a build break. One honest caveat: a default union holds null &mdash;
         an uninitialized field or array element &mdash; and then this "exhaustive" switch
-        throws SwitchExpressionException with no warning. Add a null arm, not _ =&gt;, so a
+        throws SwitchExpressionException with no warning. Add a null case, not _ =&gt;, so a
         new case still warns. Checked on the released SDK.
       </aside>
     </section>
@@ -277,7 +277,7 @@ string Describe(Payment payment) => payment switch
       <p class="lead fragment fade-up small"><code>closed</code> implies <code>abstract</code>, and it is <strong>not transitive</strong>: mark intermediate types <code>closed</code> too.</p>
       <aside class="notes">
         Same exhaustiveness, but for your own type family that shares members through a
-        base class. Leave out the Refunded arm and you get the same CS8509 as on the union
+        base class. Leave out the Refunded case and you get the same CS8509 as on the union
         slide, which I checked on GA. Union or closed? A union's cases can be any existing
         types (int, string, third-party) with no shared members; it's a struct and boxes
         value-type cases. A closed class's cases are your own derived types sharing a
@@ -819,7 +819,7 @@ app.MapGet("/health", [ShortCircuit] () => "Healthy");
     <section data-part="wrap" data-title="In summary">
       <h2>What you no longer write</h2>
       <div class="grid-2">
-        <div class="card fragment fade-up"><h4>C# 15</h4><p>The <code>_ =&gt;</code> arm: <code>union</code> and <code>closed</code> make the compiler check every case</p></div>
+        <div class="card fragment fade-up"><h4>C# 15</h4><p>The <code>_ =&gt;</code> case: <code>union</code> and <code>closed</code> make the compiler check them all</p></div>
         <div class="card fragment fade-up"><h4>Runtime</h4><p>Reading past state machines: opt-in Runtime Async shows only your own frames</p></div>
         <div class="card fragment fade-up"><h4>Tooling</h4><p>The <code>.csproj</code> for a tool: <code>dotnet app.cs</code> with <code>#:include</code></p></div>
         <div class="card fragment fade-up"><h4>Libraries &amp; web</h4><p>Process plumbing, hand-rolled joins, the OpenTelemetry instrumentation package</p></div>
