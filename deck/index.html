@@ -286,10 +286,10 @@ JsonSerializer.Serialize(new PetUnion(new Cat("Misty", 9)));
 public union Event(Created, Deleted);
 
 public sealed record Created(int Id)
-    { public string Type => "Created"; }
+    { public string Type => nameof(Created); }
 
 public sealed record Deleted(int Id)
-    { public string Type => "Deleted"; }
+    { public string Type => nameof(Deleted); }
 
 JsonSerializer.Serialize(new Event(new Created(42)));
         </script>

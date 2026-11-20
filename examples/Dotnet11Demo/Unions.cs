@@ -23,8 +23,8 @@ public sealed record JsonCat(string Name, int Lives);
 // "Type" and ByType picks the union case with that name.
 [JsonUnion(TypeClassifier = typeof(ByType))]
 public union Event(Created, Deleted);
-public sealed record Created(int Id) { public string Type => "Created"; }
-public sealed record Deleted(int Id) { public string Type => "Deleted"; }
+public sealed record Created(int Id) { public string Type => nameof(Created); }
+public sealed record Deleted(int Id) { public string Type => nameof(Deleted); }
 
 public sealed class ByType : JsonTypeClassifierFactory
 {
