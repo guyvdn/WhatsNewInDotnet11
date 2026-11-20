@@ -546,7 +546,7 @@ at <Main>(String[] args)
         <button class="btn" data-role="reset">Reset</button>
       </div>
 
-      <div class="pipeline" data-widget="pipeline" data-lang-in="csharp" data-lang-out="text" data-stagger="40">
+      <div class="pipeline" data-widget="pipeline" data-lang-in="csharp" data-lang-out="il" data-stagger="40">
         <figure class="code-window" data-role="input">
           <div class="chrome">
             <span class="dots"><i></i><i></i><i></i></span>
@@ -685,7 +685,7 @@ ret
     <section data-part="sdk" data-title="File-based apps: #:include">
       <h2>File-based apps: <code>#:include</code></h2>
       <div class="grid-2">
-        <figure class="code-window" data-code data-lang="csharp" data-file="app.cs" data-tag="one entry point">
+        <figure class="code-window roomy" data-code data-lang="csharp" data-file="app.cs" data-tag="one entry point">
           <script type="text/template">
 #!/usr/bin/env dotnet
 #:include helpers.cs
@@ -728,7 +728,7 @@ Hello, Ada!
 <span class="dim"># xUnit v3 template, on Microsoft.Testing.Platform by default</span>
 <span class="p">&gt;</span> dotnet new xunit --xunit-version v3</div>
       <ul class="rows" style="margin-top:24px">
-        <li class="fragment fade-in-then-semi-out">The <code>dotnet</code> command itself is now compiled to machine code ahead of time (<strong>NativeAOT</strong>): <code>--help</code> and tool launches skip ~600 ms of startup</li>
+        <li class="fragment fade-in-then-semi-out">The <code>dotnet</code> command itself is now compiled to machine code ahead of time (<strong>NativeAOT</strong>): <code class="nowrap">--help</code> and tool launches skip ~600 ms of startup</li>
         <li class="fragment fade-in-then-semi-out">Containers: multi-platform images with Podman, and reproducible builds (same source, same image)</li>
       </ul>
       <aside class="notes">

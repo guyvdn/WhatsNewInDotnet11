@@ -38,6 +38,8 @@ window.DeckCode = (function () {
 
   // One pass, ordered by precedence. Named groups keep the branches readable.
   const CS_RX = new RegExp([
+    // a line-leading directive: #!/usr/bin/env dotnet, #:include, #:package, #region
+    '(?<=^[ \\t]*)(?<dir>#[!:]?[A-Za-z\\/][^\\n]*)',
     // comments
     '(?<com>\\/\\/[^\\n]*|\\/\\*[\\s\\S]*?\\*\\/)',
     // strings & chars (verbatim, interpolated, doubled quotes)
@@ -62,7 +64,8 @@ window.DeckCode = (function () {
       if (m.index > last) out += esc(src.slice(last, m.index));
       const g = m.groups;
       const raw = esc(m[0]);
-      if (g.com) out += `<span class="tok-c">${raw}</span>`;
+      if (g.dir) out += `<span class="tok-a">${raw}</span>`;
+      else if (g.com) out += `<span class="tok-c">${raw}</span>`;
       else if (g.str) out += `<span class="tok-s">${raw}</span>`;
       else if (g.attr) out += `<span class="tok-a">${raw}</span>`;
       else if (g.num) out += `<span class="tok-n">${raw}</span>`;
@@ -179,8 +182,20 @@ window.DeckCode = (function () {
     return out;
   }
 
+  /* ---------------- IL (ildasm / ILSpy listings) ----------------
+     The opcode or directive at the start of a line is the keyword; the rest
+     reads like C# (types, Method::Calls, // comments), so it reuses that. */
+  function il(src) {
+    return src.split('\n').map((line) => {
+      const m = line.match(/^(\s*)(\.?[a-z][a-z0-9.]*)(.*)$/);
+      if (!m) return csharp(line);
+      return m[1] + `<span class="tok-k">${esc(m[2])}</span>` + csharp(m[3]);
+    }).join('\n');
+  }
+
   const LANGS = {
     csharp: csharp,
+    il: il,
     json: json,
     js: javascript,
     ts: javascript,
