@@ -13,7 +13,7 @@ Status: GA (11.0.0, 10 Nov 2026). .NET 11 is an **STS** release, supported until
 |------|------------|
 | `deck/` | The [reveal.js](https://revealjs.com) deck: chapter rail, slash-to-jump palette, three live panels, speaker notes |
 | `examples/Dotnet11Demo` | Every C# 15 and library snippet from the deck, compiled and run on GA (SDK 11.0.100) |
-| `examples/RuntimeAsyncDemo` | The stack-trace comparison behind the Runtime Async slide |
+| `examples/RuntimeAsyncDemo` | The code behind both Runtime Async slides: the IL and the stack traces |
 | `examples/FileBasedApp` | `dotnet run app.cs` with `#:include` |
 | `examples/ResultUnion` | A union as a mediator handler's result, mapped to HTTP: `dotnet run app.cs` |
 | `examples/NonBoxingUnion` | A hand-written `[Union]` that matches value-type cases without boxing, measured against the `union` keyword: `dotnet run -c Release app.cs` |
@@ -32,8 +32,8 @@ notes.
 |---|---|
 | The compiler has your back | A `switch` over a union misses a case: CS8509 (text from a real GA build). The light bulb adds the missing case and the build goes green. |
 | Unions on the wire | Serializes `Reading(42)`, `Reading("hello")` and a `PetUnion` with System.Text.Json: the active case only, no wrapper, no `$type`. `Event(Created, Deleted)`: two same-shaped cases, told apart by their own `Type` property and a custom classifier. |
-| Runtime Async | The same code with `runtime-async` off and on: 13 frames vs 5, measured on GA. |
 | Runtime Async: the IL | `MiddleAsync` compiled both ways, disassembled with ILSpy: a 47-byte stub plus a state-machine struct (142-byte `MoveNext`) vs 11 bytes calling `AsyncHelpers.Await`. |
+| Runtime Async: the stack | The same code with `runtime-async` off and on: 13 frames vs 5, measured on GA. |
 
 ## Running the examples
 

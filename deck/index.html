@@ -461,8 +461,110 @@ int third = Enumerable.Range(1, 10)[2];
       <aside class="notes">Same source code, a different implementation underneath.</aside>
     </section>
 
-    <section data-part="runtime" data-title="Runtime Async" data-interactive>
-      <h2>Runtime Async <span class="badge stable">opt-in</span></h2>
+    <section data-part="runtime" data-title="Runtime Async: the IL" data-interactive>
+      <h2>Runtime Async: the IL <span class="badge stable">opt-in</span></h2>
+
+      <div class="toolbar" data-widget="pipeline-toolbar">
+        <span class="label">runtime-async</span>
+        <div class="seg" data-role="kind">
+          <button data-kind="Off" aria-selected="true">off (default)</button>
+          <button data-kind="On">on</button>
+        </div>
+        <button class="btn primary" data-role="build">&#9654; Compile <span class="kbd">B</span></button>
+        <button class="btn" data-role="reset">Reset</button>
+      </div>
+
+      <div class="pipeline" data-widget="pipeline" data-lang-in="csharp" data-lang-out="il" data-stagger="40">
+        <figure class="code-window" data-role="input">
+          <div class="chrome">
+            <span class="dots"><i></i><i></i><i></i></span>
+            <span class="name">Program.cs</span>
+            <span class="tag">same source both times</span>
+          </div>
+          <div class="codelines" data-role="input-code"></div>
+        </figure>
+
+        <div class="arrow">
+          <div class="beam"></div>
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true">
+            <g class="cog">
+              <circle cx="12" cy="12" r="3.2"/>
+              <path d="M12 2.6v3M12 18.4v3M2.6 12h3M18.4 12h3M5.4 5.4l2.1 2.1M16.5 16.5l2.1 2.1M18.6 5.4l-2.1 2.1M7.5 16.5l-2.1 2.1"/>
+            </g>
+          </svg>
+        </div>
+
+        <figure class="code-window out" data-role="output">
+          <div class="chrome">
+            <span class="dots"><i></i><i></i><i></i></span>
+            <span class="name">RuntimeAsyncDemo.dll</span>
+            <span class="tag gen" style="background:none;border-color:color-mix(in oklab, var(--ok) 45%, transparent)">real IL, calls only</span>
+          </div>
+          <div class="codelines" data-role="output-code"></div>
+          <div class="placeholder">not compiled yet<br><span style="opacity:.6">press &ldquo;Compile&rdquo;</span></div>
+        </figure>
+
+        <script type="text/template" data-variant="Off" data-side="in">
+// .csproj: nothing
+
+async Task MiddleAsync() => await InnerAsync();
+        </script>
+        <script type="text/template" data-variant="Off" data-side="out">
+// MiddleAsync(): 47 bytes, sets up a state machine
+call     AsyncTaskMethodBuilder::Create()
+call     AsyncTaskMethodBuilder::Start<<MiddleAsync>d>(...)
+call     AsyncTaskMethodBuilder::get_Task()
+ret
+
+// + struct <MiddleAsync>d : IAsyncStateMachine
+//   fields <>1__state, <>t__builder, <>u__1
+
+// MoveNext(): 142 bytes, inside try/catch
+call     InnerAsync()
+callvirt Task::GetAwaiter()
+call     TaskAwaiter::get_IsCompleted()
+call     AsyncTaskMethodBuilder::AwaitUnsafeOnCompleted<...>(...)
+call     TaskAwaiter::GetResult()
+call     AsyncTaskMethodBuilder::SetException(Exception)
+call     AsyncTaskMethodBuilder::SetResult()
+ret
+
+// + SetStateMachine(): 13 bytes
+        </script>
+        <script type="text/template" data-variant="On" data-side="in">
+// .csproj: <Features>runtime-async=on</Features>
+
+async Task MiddleAsync() => await InnerAsync();
+        </script>
+        <script type="text/template" data-variant="On" data-side="out">
+// MiddleAsync(): 11 bytes, no state machine
+.method Task MiddleAsync() cil managed flags(2000)
+
+call     InnerAsync()
+call     AsyncHelpers::Await(Task)
+ret
+        </script>
+      </div>
+
+      <div class="stat-strip" data-role="stats">
+        <span class="s">whole sample: <b>306</b> IL instructions off, <b>22</b> on</span>
+        <span class="s">4 state-machine types gone</span>
+      </div>
+
+      <aside class="notes">
+        examples/RuntimeAsyncDemo, built on 11.0.100 both ways and disassembled with
+        ILSpy. Off, the compiler rewrites every async method into a small stub plus a
+        state-machine struct: MoveNext holds the awaiter dance and the try/catch that
+        routes exceptions into the Task. I've kept only the calls; the real MoveNext is
+        142 bytes of field loads and stores. On, the method stays a method: it calls
+        AsyncHelpers.Await and returns. flags(2000) is MethodImplAttributes.Async (0x2000),
+        which tells the runtime to do the suspending and resuming itself; ILSpy 11.2
+        prints it as a number. You can't set it by hand: that's CS9330. Next slide: what that does to the call stack at run time.
+      </aside>
+    </section>
+
+    <section data-part="runtime" data-title="Runtime Async: the stack" data-interactive>
+      <h2>Runtime Async: the stack</h2>
 
       <div class="toolbar" data-widget="pipeline-toolbar">
         <span class="label">runtime-async</span>
@@ -560,116 +662,14 @@ at <Main>(String[] args)
       </div>
 
       <aside class="notes">
-        Measured on GA (11.0.100) with examples/RuntimeAsyncDemo: 13 frames off, 5 on. Frame names
+        The IL from the previous slide, at run time: no MoveNext, no builder Start, no stub
+        frame. Measured on GA (11.0.100) with examples/RuntimeAsyncDemo: 13 frames off, 5 on. Frame names
         are shortened for the slide. Be honest about it: exception stack traces already
         looked like this; the win is in live stacks &mdash; profilers, the debugger's
         call-stack window &mdash; plus fewer allocations. No longer preview at GA: no
         EnablePreviewFeatures needed, but still opt-in for your own code. The framework
         libraries already use it, so test AsyncLocal and ExecutionContext-heavy code on
         upgrade.
-      </aside>
-    </section>
-
-    <section data-part="runtime" data-title="Runtime Async: the IL" data-interactive>
-      <h2>Runtime Async: the IL</h2>
-
-      <div class="toolbar" data-widget="pipeline-toolbar">
-        <span class="label">runtime-async</span>
-        <div class="seg" data-role="kind">
-          <button data-kind="Off" aria-selected="true">off (default)</button>
-          <button data-kind="On">on</button>
-        </div>
-        <button class="btn primary" data-role="build">&#9654; Compile <span class="kbd">B</span></button>
-        <button class="btn" data-role="reset">Reset</button>
-      </div>
-
-      <div class="pipeline" data-widget="pipeline" data-lang-in="csharp" data-lang-out="il" data-stagger="40">
-        <figure class="code-window" data-role="input">
-          <div class="chrome">
-            <span class="dots"><i></i><i></i><i></i></span>
-            <span class="name">Program.cs</span>
-            <span class="tag">same source both times</span>
-          </div>
-          <div class="codelines" data-role="input-code"></div>
-        </figure>
-
-        <div class="arrow">
-          <div class="beam"></div>
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true">
-            <g class="cog">
-              <circle cx="12" cy="12" r="3.2"/>
-              <path d="M12 2.6v3M12 18.4v3M2.6 12h3M18.4 12h3M5.4 5.4l2.1 2.1M16.5 16.5l2.1 2.1M18.6 5.4l-2.1 2.1M7.5 16.5l-2.1 2.1"/>
-            </g>
-          </svg>
-        </div>
-
-        <figure class="code-window out" data-role="output">
-          <div class="chrome">
-            <span class="dots"><i></i><i></i><i></i></span>
-            <span class="name">RuntimeAsyncDemo.dll</span>
-            <span class="tag gen" style="background:none;border-color:color-mix(in oklab, var(--ok) 45%, transparent)">real IL, calls only</span>
-          </div>
-          <div class="codelines" data-role="output-code"></div>
-          <div class="placeholder">not compiled yet<br><span style="opacity:.6">press &ldquo;Compile&rdquo;</span></div>
-        </figure>
-
-        <script type="text/template" data-variant="Off" data-side="in">
-// .csproj: nothing
-
-async Task MiddleAsync() => await InnerAsync();
-        </script>
-        <script type="text/template" data-variant="Off" data-side="out">
-// MiddleAsync(): 47 bytes, sets up a state machine
-call     AsyncTaskMethodBuilder::Create()
-call     AsyncTaskMethodBuilder::Start<<MiddleAsync>d>(...)
-call     AsyncTaskMethodBuilder::get_Task()
-ret
-
-// + struct <MiddleAsync>d : IAsyncStateMachine
-//   fields <>1__state, <>t__builder, <>u__1
-
-// MoveNext(): 142 bytes, inside try/catch
-call     InnerAsync()
-callvirt Task::GetAwaiter()
-call     TaskAwaiter::get_IsCompleted()
-call     AsyncTaskMethodBuilder::AwaitUnsafeOnCompleted<...>(...)
-call     TaskAwaiter::GetResult()
-call     AsyncTaskMethodBuilder::SetException(Exception)
-call     AsyncTaskMethodBuilder::SetResult()
-ret
-
-// + SetStateMachine(): 13 bytes
-        </script>
-        <script type="text/template" data-variant="On" data-side="in">
-// .csproj: <Features>runtime-async=on</Features>
-
-async Task MiddleAsync() => await InnerAsync();
-        </script>
-        <script type="text/template" data-variant="On" data-side="out">
-// MiddleAsync(): 11 bytes, no state machine
-.method Task MiddleAsync() cil managed flags(2000)
-
-call     InnerAsync()
-call     AsyncHelpers::Await(Task)
-ret
-        </script>
-      </div>
-
-      <div class="stat-strip" data-role="stats">
-        <span class="s">whole sample: <b>306</b> IL instructions off, <b>22</b> on</span>
-        <span class="s">4 state-machine types gone</span>
-      </div>
-
-      <aside class="notes">
-        Same examples/RuntimeAsyncDemo, built on 11.0.100 both ways and disassembled with
-        ILSpy. Off, the compiler rewrites every async method into a small stub plus a
-        state-machine struct: MoveNext holds the awaiter dance and the try/catch that
-        routes exceptions into the Task. I've kept only the calls; the real MoveNext is
-        142 bytes of field loads and stores. On, the method stays a method: it calls
-        AsyncHelpers.Await and returns. flags(2000) is MethodImplAttributes.Async (0x2000),
-        which tells the runtime to do the suspending and resuming itself; ILSpy 11.2
-        prints it as a number. You can't set it by hand: that's CS9330. That's where the shorter stacks on the previous slide come from:
-        no MoveNext, no builder Start, no stub frame.
       </aside>
     </section>
 
