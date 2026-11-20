@@ -351,7 +351,7 @@ string Describe(Payment payment) => payment switch
         value-type cases. A closed class's cases are your own derived types sharing a
         base. Rule of thumb: where you'd write OneOf&lt;A, B&gt; or a Result type, it's a
         union; where you'd write an abstract base and a few records, it's closed.
-        Not transitive: another assembly can still derive from Pending, Paid or Refunded,
+        Only the direct subtypes are covered: another assembly can still derive from Pending, Paid or Refunded,
         but the switch stays exhaustive, because the Pending case matches any subclass.
         To prevent that, mark them sealed. Not closed: that makes them abstract, so
         new Pending() would no longer compile.
