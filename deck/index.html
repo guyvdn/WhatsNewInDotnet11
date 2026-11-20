@@ -368,7 +368,7 @@ HashSet<string> set =
 // set.Count == 1
           </script>
         </figure>
-        <p class="lead small">Press <kbd>&darr;</kbd> for labeled loops, extension indexers and memory safety.</p>
+        <p class="lead small">Press <kbd>&darr;</kbd> for labeled loops and extension indexers.</p>
         <aside class="notes">
           The comparer case is the one people hit: before, a HashSet with a custom
           comparer meant you couldn't use a collection expression at all.
@@ -409,16 +409,6 @@ int third = Enumerable.Range(1, 10)[2];
           </script>
         </figure>
         <aside class="notes">C# 14 gave us extension blocks with properties; C# 15 adds indexers.</aside>
-      </section>
-
-      <section data-part="csharp" data-title="Memory safety (preview)">
-        <h2>Memory safety <span class="badge preview">preview</span></h2>
-        <ul class="rows">
-          <li>Pointer <em>types</em>, <code>&amp;</code>, <code>fixed</code> and <code>sizeof</code> no longer need <code>unsafe</code></li>
-          <li>Only operations that touch the memory do (<code>*p</code>, <code>-&gt;</code>, <code>p[i]</code>, calling a function pointer) &mdash; <code>unsafe(expr)</code> scopes it to one expression</li>
-          <li>Needs <code>LangVersion preview</code>; slated for a later C# version</li>
-        </ul>
-        <aside class="notes">Mention only. Don't put this in client code.</aside>
       </section>
     </section>
 
@@ -543,6 +533,106 @@ at <Main>(String[] args)
       </aside>
     </section>
 
+    <section data-part="runtime" data-title="Runtime Async: the IL" data-interactive>
+      <h2>Runtime Async: the IL</h2>
+
+      <div class="toolbar" data-widget="pipeline-toolbar">
+        <span class="label">runtime-async</span>
+        <div class="seg" data-role="kind">
+          <button data-kind="Off" aria-selected="true">off (default)</button>
+          <button data-kind="On">on</button>
+        </div>
+        <button class="btn primary" data-role="build">&#9654; Compile <span class="kbd">B</span></button>
+        <button class="btn" data-role="reset">Reset</button>
+      </div>
+
+      <div class="pipeline" data-widget="pipeline" data-lang-in="csharp" data-lang-out="text" data-stagger="40">
+        <figure class="code-window" data-role="input">
+          <div class="chrome">
+            <span class="dots"><i></i><i></i><i></i></span>
+            <span class="name">Program.cs</span>
+            <span class="tag">same source both times</span>
+          </div>
+          <div class="codelines" data-role="input-code"></div>
+        </figure>
+
+        <div class="arrow">
+          <div class="beam"></div>
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true">
+            <g class="cog">
+              <circle cx="12" cy="12" r="3.2"/>
+              <path d="M12 2.6v3M12 18.4v3M2.6 12h3M18.4 12h3M5.4 5.4l2.1 2.1M16.5 16.5l2.1 2.1M18.6 5.4l-2.1 2.1M7.5 16.5l-2.1 2.1"/>
+            </g>
+          </svg>
+        </div>
+
+        <figure class="code-window out" data-role="output">
+          <div class="chrome">
+            <span class="dots"><i></i><i></i><i></i></span>
+            <span class="name">RuntimeAsyncDemo.dll</span>
+            <span class="tag gen" style="background:none;border-color:color-mix(in oklab, var(--ok) 45%, transparent)">real IL, calls only</span>
+          </div>
+          <div class="codelines" data-role="output-code"></div>
+          <div class="placeholder">not compiled yet<br><span style="opacity:.6">press &ldquo;Compile&rdquo;</span></div>
+        </figure>
+
+        <script type="text/template" data-variant="Off" data-side="in">
+// .csproj: nothing
+
+async Task MiddleAsync() => await InnerAsync();
+        </script>
+        <script type="text/template" data-variant="Off" data-side="out">
+// MiddleAsync(): 47 bytes, sets up a state machine
+call     AsyncTaskMethodBuilder::Create()
+call     AsyncTaskMethodBuilder::Start<<MiddleAsync>d>(...)
+call     AsyncTaskMethodBuilder::get_Task()
+ret
+
+// + struct <MiddleAsync>d : IAsyncStateMachine
+//   fields <>1__state, <>t__builder, <>u__1
+// MoveNext(): 142 bytes, inside try/catch
+call     InnerAsync()
+callvirt Task::GetAwaiter()
+call     TaskAwaiter::get_IsCompleted()
+call     AsyncTaskMethodBuilder::AwaitUnsafeOnCompleted<...>(...)
+call     TaskAwaiter::GetResult()
+call     AsyncTaskMethodBuilder::SetException(Exception)
+call     AsyncTaskMethodBuilder::SetResult()
+ret
+// + SetStateMachine(): 13 bytes
+        </script>
+        <script type="text/template" data-variant="On" data-side="in">
+// .csproj: <Features>runtime-async=on</Features>
+
+async Task MiddleAsync() => await InnerAsync();
+        </script>
+        <script type="text/template" data-variant="On" data-side="out">
+// MiddleAsync(): 11 bytes, no state machine
+.method Task MiddleAsync() cil managed flags(2000)
+call     InnerAsync()
+call     AsyncHelpers::Await(Task)
+ret
+        </script>
+      </div>
+
+      <div class="stat-strip" data-role="stats">
+        <span class="s">whole sample: <b>306</b> IL instructions off, <b>22</b> on</span>
+        <span class="s">4 state-machine types gone</span>
+      </div>
+
+      <aside class="notes">
+        Same examples/RuntimeAsyncDemo, built on 11.0.100 both ways and disassembled with
+        ILSpy. Off, the compiler rewrites every async method into a small stub plus a
+        state-machine struct: MoveNext holds the awaiter dance and the try/catch that
+        routes exceptions into the Task. I've kept only the calls; the real MoveNext is
+        142 bytes of field loads and stores. On, the method stays a method: it calls
+        AsyncHelpers.Await and returns. flags(2000) is MethodImplAttributes.Async (0x2000),
+        which tells the runtime to do the suspending and resuming itself; ILSpy 11.2
+        prints it as a number. You can't set it by hand: that's CS9330. That's where the shorter stacks on the previous slide come from:
+        no MoveNext, no builder Start, no stub frame.
+      </aside>
+    </section>
+
     <section data-part="runtime" data-title="Faster without code changes">
       <h2>Faster without code changes</h2>
       <div class="grid-3">
@@ -606,13 +696,11 @@ Console.WriteLine(
     Helpers.FormatOutput(new Customer("Ada")));
           </script>
         </figure>
-        <div class="terminal">
-<span class="dim">PS</span> <span class="p">tools&gt;</span> dotnet run app.cs -e GREETING=hi
+        <div class="terminal"><span class="dim">PS</span> <span class="p">tools&gt;</span> dotnet run app.cs -e GREETING=hi
 Hello, Ada!
 
 <span class="dim">PS</span> <span class="p">tools&gt;</span> dotnet format app.cs
-<span class="dim">PS</span> <span class="p">tools&gt;</span> dotnet reference add --file app.cs ../Lib/Lib.csproj
-        </div>
+<span class="dim">PS</span> <span class="p">tools&gt;</span> dotnet reference add --file app.cs ../Lib/Lib.csproj</div>
       </div>
       <ul class="rows" style="margin-top:28px">
         <li class="fragment fade-in-then-semi-out">Split across files, reference DLLs; an unchanged app relaunches without a rebuild</li>
@@ -628,23 +716,42 @@ Hello, Ada!
 
     <section data-part="sdk" data-title="CLI and dotnet test">
       <h2>CLI and <code>dotnet test</code></h2>
-      <div class="terminal">
-<span class="dim"># solution filters (a subset of a solution), from the CLI</span>
-<span class="p">&gt;</span> dotnet new slnf --parent-solution MyApp.slnx --name Lib
-<span class="p">&gt;</span> dotnet sln Lib.slnf add src/Lib/Lib.csproj
+      <div class="terminal"><span class="dim"># solution filters from the CLI: work on part of a big solution</span>
+<span class="p">&gt;</span> dotnet new slnf --parent-solution MyApp.slnx --name Tests
+<span class="p">&gt;</span> dotnet sln Tests.slnf add tests/Tests/Tests.csproj
 
-<span class="dim"># dotnet test on the new Microsoft.Testing.Platform runner</span>
-<span class="p">&gt;</span> dotnet test --timeout 90s --maximum-failed-tests 5
+<span class="dim"># dotnet test on Microsoft.Testing.Platform: limits for the whole run</span>
+<span class="p">&gt;</span> dotnet test --timeout 90s              <span class="dim"># hung run: stop, exit code 3</span>
+<span class="p">&gt;</span> dotnet test --maximum-failed-tests 5   <span class="dim"># broken build: stop, exit code 13</span>
 <span class="p">&gt;</span> dotnet test dirs.proj --results-directory-layout per-module
-<span class="p">&gt;</span> dotnet new xunit --xunit-version v3
-      </div>
+
+<span class="dim"># xUnit v3 template, on Microsoft.Testing.Platform by default</span>
+<span class="p">&gt;</span> dotnet new xunit --xunit-version v3</div>
       <ul class="rows" style="margin-top:24px">
         <li class="fragment fade-in-then-semi-out">The <code>dotnet</code> command itself is now compiled to machine code ahead of time (<strong>NativeAOT</strong>): <code>--help</code> and tool launches skip ~600 ms of startup</li>
         <li class="fragment fade-in-then-semi-out">Containers: multi-platform images with Podman, and reproducible builds (same source, same image)</li>
       </ul>
       <aside class="notes">
-        Live display of in-flight tests and per-assembly counts too. Container local-runtime preference changed to
-        wslc / container before Docker: a breaking change for some build scripts.
+        Three things you'll notice day to day. Solution filters: in a big repo you only
+        want the projects you're working on. Until now that meant hand-editing .slnf JSON
+        or using Visual Studio; now dotnet sln does it, with the same add/list/remove
+        commands as for a solution.
+        dotnet test: these are guards for CI. --timeout stops a hung run after 90 seconds
+        with exit code 3, instead of waiting for the pipeline's own timeout.
+        --maximum-failed-tests stops after five failures with exit code 13, instead of
+        reporting two thousand red tests from one broken fixture. dirs.proj: traversal
+        projects work now. per-module gives every test project its own results folder, so
+        TRX and coverage files stop overwriting each other. The catch: all of this is the
+        Microsoft.Testing.Platform mode of dotnet test. Opt in with the test runner in
+        global.json, or for one session with DOTNET_TEST_RUNNER=Microsoft.Testing.Platform.
+        Also new: live display of the tests that are running, and per-assembly counts.
+        NativeAOT CLI: dotnet --help, --version and launching tools like dotnet ef skip the
+        600 to 700 ms of managed startup. Opt out with DOTNET_CLI_ENABLEAOT=false. The
+        MSBuild server is now on by default as well.
+        Containers: multi-arch images with Podman, and SOURCE_DATE_EPOCH gives the same
+        image digest for the same inputs. Breaking for some build scripts: the SDK now
+        prefers wslc on Windows and container on macOS over Docker; set LocalRegistry to
+        pin one.
       </aside>
     </section>
 
@@ -852,15 +959,13 @@ app.MapGet("/health", [ShortCircuit] () => "Healthy");
 
     <section data-part="wrap" data-title="The sneaky one: decimal">
       <h2>The sneaky one</h2>
-      <div class="terminal">
-<span class="dim"># double d = 1.23; decimal m = (decimal)d; Console.WriteLine($"{m} {m == 1.23m}");</span>
+      <div class="terminal"><span class="dim"># double d = 1.23; decimal m = (decimal)d; Console.WriteLine($"{m} {m == 1.23m}");</span>
 
 <span class="dim">PS</span> <span class="p">net10&gt;</span> dotnet run dec.cs
   1.23 <span class="ok">True</span>
 
 <span class="dim">PS</span> <span class="p">net11&gt;</span> dotnet run dec.cs
-  1.2299999999999999822364316060 <span class="er">False</span>
-      </div>
+  1.2299999999999999822364316060 <span class="er">False</span></div>
       <p class="lead small" style="margin-top:24px">Correctly rounded now: the <code>double</code>'s exact value, rounded once. Before, it was rounded to 15 significant digits.</p>
       <aside class="notes">
         Real output, .NET 10.0.401 vs 11.0.100 GA. Mathematically the new result is the
