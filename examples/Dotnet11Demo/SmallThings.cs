@@ -20,15 +20,9 @@ public static class SmallThings
         int third = Enumerable.Range(1, 10)[2];
         Console.WriteLine(third);
 
-        int[,] grid = { { 0, 0, 1 }, { 0, 2, 0 } };
-        outer: for (int row = 0; row < grid.GetLength(0); row++)
-        {
-            for (int column = 0; column < grid.GetLength(1); column++)
-            {
-                if (grid[row, column] == 1) continue outer;
-                if (grid[row, column] == 2) break outer;
-            }
-        }
+        // 0 = open, 1 = blocked, 2 = goal: count the clear rows before the goal
+        int[,] grid = { { 0, 0, 0 }, { 0, 1, 0 }, { 0, 2, 0 }, { 0, 0, 0 } };
+        Console.WriteLine($"{ClearRowsWithFlags(grid)} {ClearRowsWithLabels(grid)}");
 
         var byName = EqualityComparer<(string Name, int Age)>.Create(p => p.Name);
         var people = new HashSet<(string Name, int Age)>(byName)
@@ -38,5 +32,40 @@ public static class SmallThings
         long l = Random.Shared.NextInteger<long>(0L, 100L);
         Half h = Random.Shared.NextBinaryFloat<Half>();
         Console.WriteLine($"{l} {h}");
+    }
+
+    static int ClearRowsWithFlags(int[,] grid)
+    {
+        int clearRows = 0;
+        bool found = false;
+        for (int row = 0; row < grid.GetLength(0) && !found; row++)
+        {
+            bool blocked = false;
+            for (int column = 0; column < grid.GetLength(1); column++)
+            {
+                if (grid[row, column] == 1) { blocked = true; break; }
+                if (grid[row, column] == 2) { found = true; break; }
+            }
+            if (blocked || found) continue;
+
+            clearRows++;
+        }
+        return clearRows;
+    }
+
+    static int ClearRowsWithLabels(int[,] grid)
+    {
+        int clearRows = 0;
+        outer: for (int row = 0; row < grid.GetLength(0); row++)
+        {
+            for (int column = 0; column < grid.GetLength(1); column++)
+            {
+                if (grid[row, column] == 1) continue outer;
+                if (grid[row, column] == 2) break outer;
+            }
+
+            clearRows++;
+        }
+        return clearRows;
     }
 }

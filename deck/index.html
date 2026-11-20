@@ -381,8 +381,31 @@ HashSet<string> set = [with(StringComparer.OrdinalIgnoreCase), "Hello", "HELLO",
 
       <section data-part="csharp" data-title="Labeled break and continue">
         <h2>Labeled <code>break</code> / <code>continue</code></h2>
-        <figure class="code-window" data-code data-lang="csharp" data-file="Grid.cs" data-tag="no more goto">
-          <script type="text/template">
+        <div class="grid-2">
+          <div>
+            <p class="small" style="color:var(--bad);margin:0 0 8px">until now</p>
+            <figure class="code-window" data-code data-lang="csharp" data-file="Grid.cs" data-tag="flag variables">
+              <script type="text/template">
+bool found = false;
+for (int row = 0; row < grid.Height && !found; row++)
+{
+    bool blocked = false;
+    for (int column = 0; column < grid.Width; column++)
+    {
+        if (grid[row, column].IsBlocked) { blocked = true; break; }
+        if (grid[row, column].IsGoal)    { found = true; break; }
+    }
+    if (blocked || found) continue;
+
+    clearRows++;
+}
+              </script>
+            </figure>
+          </div>
+          <div class="fragment fade-up">
+            <p class="small" style="color:var(--ok);margin:0 0 8px">C# 15</p>
+            <figure class="code-window" data-code data-lang="csharp" data-file="Grid.cs" data-tag="no flags, no goto">
+              <script type="text/template">
 outer: for (int row = 0; row < grid.Height; row++)
 {
     for (int column = 0; column < grid.Width; column++)
@@ -390,11 +413,21 @@ outer: for (int row = 0; row < grid.Height; row++)
         if (grid[row, column].IsBlocked) continue outer;
         if (grid[row, column].IsGoal)    break outer;
     }
+
+    clearRows++;
 }
-          </script>
-        </figure>
+              </script>
+            </figure>
+          </div>
+        </div>
         <p class="lead small">Visual Studio offers the rewrite from flag variables (quick fix <code>IDE0410</code>).</p>
-        <aside class="notes">Replaces the bool-found-flag pattern and the occasional goto.</aside>
+        <aside class="notes">
+          Same loop both ways: count the rows before the goal that have no blocked cell.
+          Before: two flags, a break that only leaves the inner loop, and a check after it
+          to skip the rest of the row or stop altogether &mdash; or a goto. After: continue
+          outer skips to the next row, break outer leaves both loops. Both versions give
+          the same counts in examples/Dotnet11Demo.
+        </aside>
       </section>
 
       <section data-part="csharp" data-title="Extension indexers">
