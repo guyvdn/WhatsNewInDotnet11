@@ -342,7 +342,7 @@ string Describe(Payment payment) => payment switch
 };
         </script>
       </figure>
-      <p class="lead fragment fade-up small"><code>closed</code> implies <code>abstract</code>, and it is <strong>not transitive</strong>: mark the derived types <code>sealed</code> to stop further derivation, or <code>closed</code> if they have subtypes of their own.</p>
+      <p class="lead fragment fade-up small"><code>closed</code> implies <code>abstract</code>, and it <strong>only covers the direct subtypes</strong>: mark them <code>sealed</code> to stop further derivation, or <code>closed</code> if they have subtypes of their own.</p>
       <aside class="notes">
         Same exhaustiveness, but for your own type family that shares members through a
         base class. Leave out the Refunded case and you get the same CS8509 as on the union
